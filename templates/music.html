@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="now-playing-Card">
+  <div class="np-card-top">
+    <div class="np-art-cell">
+      <div class="np-art-thumb" id="np-art-thumb">
+        <img id="np-cover-img" src="" alt="" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:14px;">
+        <div class="np-art-thumb-dot" id="np-art-dot"></div>
+      </div>
+    </div>
+    <div class="np-info-cell">
+      <div class="np-song-title" id="np-title">Belum Ada Lagu</div>
+      <div class="np-song-artist" id="np-meta">Pilih lagu di bawah</div>
+    </div>
+    <div class="np-more-cell">
+      <a href="{{ url_for('page_sync') }}" class="np-round-mini" style="display:inline-block; text-decoration:none;">
+        <svg class="svg-ic" viewBox="0 0 24 24"><path d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+      </a>
+    </div>
+  </div>
+
+  <div class="np-scrubber-area" id="scrubber-box" onclick="seekByLinearBar(event)">
+    <div class="np-bar-track">
+      <div class="np-bar-fill" id="np-bar-fill"></div>
+    </div>
+    <div class="np-time-row">
+      <span class="np-time-left" id="time-cur">0:00</span>
+      <span class="np-time-right" id="time-dur">0:00</span>
+    </div>
+  </div>
+
+  <div class="np-transport-table">
+    <div class="np-trans-cell">
+      <button type="button" class="btn-trans-side" onclick="shuffleAndPlay()">
+        <svg class="svg-ic" viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+      </button>
+    </div>
+    <div class="np-trans-cell">
+      <button type="button" class="btn-trans-step" onclick="playPrevTrack()">
+        <svg class="svg-ic" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+      </button>
+    </div>
+    <div class="np-trans-cell">
+      <button type="button" class="btn-trans-main" id="btn-play-main" onclick="togglePlayPause()">
+        <svg class="svg-ic" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+    </div>
+    <div class="np-trans-cell">
+      <button type="button" class="btn-trans-step" onclick="playNextTrack()">
+        <svg class="svg-ic" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+      </button>
+    </div>
+    <div class="np-trans-cell">
+      <button type="button" class="btn-trans-side" id="btn-loop" onclick="toggleLoopMode()">ALL</button>
+    </div>
+  </div>
+</div>
+
+<!-- BAGIAN 1: GRUP ALBUM -->
+<div id="albums-section-wrap" style="display:none; margin-bottom:14px;">
+  <div class="section-bar">
+    <div class="sb-title" id="albums-count-title">Grup Album (0)</div>
+    <div class="sb-action">
+      <a href="{{ url_for('page_sync') }}" class="pill-mini-btn" style="text-decoration:none;">+ Buat Album</a>
+    </div>
+  </div>
+  <div id="albums-container"></div>
+</div>
+
+<!-- BAGIAN 2: LAGU DI LUAR ALBUM -->
+<div class="section-bar">
+  <div class="sb-title" id="lib-meta-summary">Lagu di Luar Album (0)</div>
+  <div class="sb-action">
+    <button type="button" class="pill-mini-btn" onclick="quickScanMusic()">Refresh Lagu</button>
+  </div>
+</div>
+
+<div id="playlist-container"></div>
+
+<!-- MODAL 1: PINDAHKAN LAGU KE ALBUM & UBAH GAMBAR LAGU -->
+<div class="modal-backdrop" id="edit-modal-backdrop" onclick="closeEditTrackModal()"></div>
+<div class="modal-box" id="edit-modal-box">
+  <div class="card-title-row">
+    <span class="ct-left">Pindah Album &amp; Gambar Lagu</span>
+    <span class="ct-right">
+      <button type="button" class="pill-mini-btn" onclick="closeEditTrackModal()">&#10005;</button>
+    </span>
+  </div>
+
+  <input type="hidden" id="edit-track-filename">
+
+  <div class="modal-field-lbl">Judul Lagu</div>
+  <input type="text" id="edit-track-title" class="input-field" placeholder="Judul lagu...">
+
+  <div class="modal-field-lbl">Pindahkan ke Grup Album</div>
+  <input type="text" id="edit-album-filter" class="input-field" placeholder="Ketik untuk mencari nama album..." oninput="filterModalAlbumSelect(this.value)">
+  <select id="edit-track-album-select" class="input-field">
+    <option value="">-- Di Luar Album (Tanpa Grup) --</option>
+  </select>
+
+  <div class="modal-field-lbl">Gambar Sampul Lagu Ini</div>
+  <label class="file-drop-label" for="edit-track-cover-file" id="edit-cover-label">
+    + Pilih File Gambar (JPG/PNG) dari Perangkat
+  </label>
+  <input type="file" id="edit-track-cover-file" accept=".jpg,.jpeg,.png,.webp,.gif" style="display:none;" onchange="updateCoverFileLabel(this)">
+  <input type="text" id="edit-track-cover-url" class="input-field" placeholder="Atau tempel URL gambar (https://...)">
+
+  <button type="button" class="btn-full-dark" onclick="saveTrackMetaChanges()">Simpan Perubahan</button>
+  <div class="split-2-table" style="margin-top:8px; margin-bottom:0;">
+    <div class="split-cell">
+      <button type="button" class="btn-full-soft" style="margin-bottom:0;" onclick="removeTrackFromAlbum()">Keluarkan dari Album</button>
+    </div>
+    <div class="stat-spacer"></div>
+    <div class="split-cell">
+      <button type="button" class="btn-full-soft" style="margin-bottom:0; color:var(--red-err);" onclick="deleteTrackFromModal()">Hapus Lagu</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 2: SEBALIKNYA (TARIK LAGU KE DALAM ALBUM INI) -->
+<div class="modal-backdrop" id="assign-modal-backdrop" onclick="closeAssignToAlbumModal()"></div>
+<div class="modal-box" id="assign-modal-box">
+  <div class="card-title-row">
+    <span class="ct-left" id="assign-modal-title">Tambah Lagu ke Album</span>
+    <span class="ct-right">
+      <button type="button" class="pill-mini-btn" onclick="closeAssignToAlbumModal()">&#10005;</button>
+    </span>
+  </div>
+  <input type="hidden" id="assign-target-album">
+  <div class="modal-field-lbl">Pilih Lagu untuk Dimasukkan ke Album Ini</div>
+  <select id="assign-track-select" class="input-field"></select>
+  <button type="button" class="btn-full-dark" onclick="confirmAssignTrackToAlbum()">+ Masukkan ke Album</button>
+</div>
+
+<audio id="hw-audio" preload="metadata" playsinline webkit-playsinline style="display:none;"></audio>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/music.js') }}?v=14"></script>
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- CARD 1: TAMBAH / UPLOAD LAGU DENGAN SELECT PENCARIAN ALBUM -->
+<div class="clean-card">
+  <div class="card-title-row">
+    <span class="ct-left">1. Tambah Lagu &amp; Pilih Grup Album</span>
+    <span class="ct-right" id="sync-badge" style="color:var(--green-ok);">HTTP 206 READY</span>
+  </div>
+
+  <div class="split-2-table">
+    <div class="split-cell">
+      <button type="button" class="btn-full-dark" style="margin-top:0;" onclick="scanServerFolder()">Scan Folder music</button>
+    </div>
+    <div class="stat-spacer"></div>
+    <div class="split-cell">
+      <button type="button" class="btn-full-soft" style="margin-bottom:0;" onclick="runServerDiagnostics()">Cek Diagnostik</button>
+    </div>
+  </div>
+
+  <label class="file-drop-label" for="upload-mp3-input" id="file-picker-text">
+    + Pilih File MP3 / M4A (100MB+) dari Perangkat
+  </label>
+  <input type="file" id="upload-mp3-input" accept=".mp3,.m4a,.aac,.wav,.ogg" style="display:none;" onchange="updateSelectedFileName(this)">
+
+  <!-- KOLOM SELECT PENCARI ALBUM DI BAWAH INPUT LAGU -->
+  <div class="modal-field-lbl">Pilih Grup Album untuk Lagu Ini</div>
+  <div class="split-2-table">
+    <div class="split-cell" style="width:42%;">
+      <input type="text" id="filter-upload-album" class="input-field" placeholder="Cari album..." oninput="filterAlbumSelect('filter-upload-album', 'upload-album-select')">
+    </div>
+    <div class="stat-spacer"></div>
+    <div class="split-cell" style="width:56%;">
+      <select id="upload-album-select" class="input-field">
+        <option value="">-- Di Luar Album (Tanpa Grup) --</option>
+      </select>
+    </div>
+  </div>
+
+  <label class="file-drop-label" for="upload-cover-input" id="upload-cover-text" style="padding:8px 10px;">
+    + Pilih Gambar Sampul Khusus Lagu Ini (Opsional)
+  </label>
+  <input type="file" id="upload-cover-input" accept=".jpg,.jpeg,.png,.webp" style="display:none;" onchange="updateUploadCoverLabel(this)">
+
+  <button type="button" class="btn-full-dark" style="margin-bottom:14px;" onclick="uploadMp3ToServer()">Upload Lagu ke Server</button>
+
+  <!-- OPSIONAL: TAMBAH DARI LINK CLOUD -->
+  <div class="card-title-row" style="border-top:1px solid var(--border-line); padding-top:10px;">
+    <span class="ct-left">Atau Tambah Lagu dari Link Cloud</span>
+  </div>
+  <input type="text" id="cloud-track-title" class="input-field" placeholder="Judul Lagu Cloud">
+  <div class="split-2-table">
+    <div class="split-cell" style="width:68%;">
+      <input type="text" id="cloud-track-url" class="input-field" placeholder="https://.../lagu_100mb.mp3">
+    </div>
+    <div class="stat-spacer"></div>
+    <div class="split-cell" style="width:30%;">
+      <input type="number" id="cloud-track-size" class="input-field" placeholder="MB">
+    </div>
+  </div>
+  <select id="cloud-album-select" class="input-field">
+    <option value="">-- Di Luar Album (Tanpa Grup) --</option>
+  </select>
+  <input type="text" id="cloud-track-cover" class="input-field" placeholder="URL Gambar Lagu (Opsional)">
+  <button type="button" class="btn-full-soft" style="margin-bottom:0;" onclick="addCloudTrackLink()">+ Simpan Link Cloud ke MongoDB</button>
+
+  <div class="np-bar-track" style="background:#E1E4EB; margin:10px 0 0 0;">
+    <div class="np-bar-fill" id="sync-progress-bar" style="background:var(--text-dark);"></div>
+  </div>
+</div>
+
+<!-- CARD 2: PEMBUATAN & DAFTAR GRUP ALBUM (CARD BERIKUTNYA) -->
+<div class="clean-card">
+  <div class="card-title-row">
+    <span class="ct-left">2. Buat &amp; Kelola Grup Album</span>
+    <span class="ct-right" id="album-total-badge">0 Album</span>
+  </div>
+
+  <input type="text" id="new-album-name" class="input-field" placeholder="Nama Album Baru (Contoh: Raisa Best / Acoustic)">
+  <label class="file-drop-label" for="new-album-cover" id="new-album-cover-text" style="padding:8px 10px;">
+    + Pilih Gambar Sampul Album (Opsional)
+  </label>
+  <input type="file" id="new-album-cover" accept=".jpg,.jpeg,.png,.webp" style="display:none;" onchange="updateNewAlbumCoverLabel(this)">
+  <button type="button" class="btn-full-dark" style="margin-bottom:12px;" onclick="createNewAlbumGroup()">+ Buat Grup Album Baru</button>
+
+  <div id="sync-albums-list"></div>
+</div>
+
+<!-- CARD 3: DIAGNOSTIK & LOG SERVER -->
+<div class="clean-card">
+  <div class="card-title-row">
+    <span class="ct-left">3. Status Database &amp; Log Diagnostik</span>
+    <span class="ct-right">
+      <button type="button" class="pill-mini-btn" onclick="copyDiagnosticLog()">Salin Log</button>
+    </span>
+  </div>
+
+  <div class="stat-table-grid" style="margin-bottom:12px;">
+    <div class="stat-cell">
+      <div class="stat-val" id="stat-db-engine">MONGODB</div>
+      <div class="stat-lbl">Database</div>
+    </div>
+    <div class="stat-spacer"></div>
+    <div class="stat-cell">
+      <div class="stat-val" id="stat-track-count">0</div>
+      <div class="stat-lbl">Total Lagu</div>
+    </div>
+    <div class="stat-spacer"></div>
+    <div class="stat-cell">
+      <div class="stat-val" id="stat-total-mb">0 MB</div>
+      <div class="stat-lbl">Ukuran MP3</div>
+    </div>
+  </div>
+
+  <div class="log-box" id="sync-log"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/sync.js') }}?v=14"></script>
+{% endblock %}

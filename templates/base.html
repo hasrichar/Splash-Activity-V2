@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Splash v2">
+  <title>{{ page_title }} - Splash v2</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=10">
+</head>
+<body>
+
+  <!-- TOP HEADER BAR -->
+  <div class="top-header">
+    <div class="top-header-inner">
+      <div class="th-cell th-left">
+        <button type="button" class="menu-trigger-btn" onclick="toggleMenuDrawer(true)">
+          <svg class="svg-ic" viewBox="0 0 24 24">
+            <path d="M12 2L14.8 9.2L22 12L14.8 14.8L12 22L9.2 14.8L2 12L9.2 9.2L12 2Z"/>
+          </svg>
+          <span>Menu</span>
+        </button>
+      </div>
+      <div class="th-cell th-center">
+        <div class="page-Indicator-pill">{{ page_title }}</div>
+      </div>
+      <div class="th-cell th-right">
+        <span class="status-mini-pill">MONGODB</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE-OUT SIDEBAR MENU (GAMBAR 5) -->
+  <div class="menu-backdrop" id="menu-backdrop" onclick="toggleMenuDrawer(false)"></div>
+  <div class="menu-drawer" id="menu-drawer">
+    <div class="drawer-head">
+      <div class="drawer-brand">
+        <svg class="svg-ic" viewBox="0 0 24 24">
+          <path d="M12 2L14.8 9.2L22 12L14.8 14.8L12 22L9.2 14.8L2 12L9.2 9.2L12 2Z"/>
+        </svg>
+        <span>Menu</span>
+      </div>
+      <button type="button" class="drawer-close-btn" onclick="toggleMenuDrawer(false)">&#10005;</button>
+    </div>
+
+    <div class="drawer-section-lbl">Halaman Aplikasi</div>
+
+    <a href="{{ url_for('page_music') }}" class="drawer-item {% if active_page == 'music' %}active{% endif %}">
+      <svg class="svg-ic" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+      <span>Music Player</span>
+      <span class="drawer-badge" id="menu-track-badge">{{ track_count }}</span>
+    </a>
+
+    <a href="{{ url_for('page_finance') }}" class="drawer-item {% if active_page == 'finance' %}active{% endif %}">
+      <svg class="svg-ic" viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+      <span>Finance Vault</span>
+    </a>
+
+    <a href="{{ url_for('page_sync') }}" class="drawer-item {% if active_page == 'sync' %}active{% endif %}">
+      <svg class="svg-ic" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+      <span>Integrations &amp; Log</span>
+    </a>
+  </div>
+
+  <!-- AREA KONTEN HALAMAN -->
+  <div class="main-wrap">
+    {% block content %}{% endblock %}
+  </div>
+
+  <script src="{{ url_for('static', filename='js/core.js') }}?v=10"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

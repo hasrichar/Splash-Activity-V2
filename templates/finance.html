@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="clean-card">
+  <div class="card-title-row">
+    <span class="ct-left">Total Saldo Aktif</span>
+    <span class="ct-right" id="tx-count-label">0 Transaksi</span>
+  </div>
+  <div class="big-balance-num" id="total-balance">IDR 0</div>
+  <div class="stat-table-grid">
+    <div class="stat-cell">
+      <div class="stat-val" id="total-income" style="color:var(--green-ok);">IDR 0</div>
+      <div class="stat-lbl">Pemasukan</div>
+    </div>
+    <div class="stat-spacer"></div>
+    <div class="stat-cell">
+      <div class="stat-val" id="total-expense" style="color:var(--red-err);">IDR 0</div>
+      <div class="stat-lbl">Pengeluaran</div>
+    </div>
+  </div>
+</div>
+
+<div class="clean-card">
+  <div class="card-title-row">
+    <span class="ct-left">Catat Transaksi Baru</span>
+  </div>
+  <div class="split-2-table">
+    <div class="split-cell">
+      <select id="tx-type" class="input-field">
+        <option value="OUT">Pengeluaran (-)</option>
+        <option value="IN">Pemasukan (+)</option>
+      </select>
+    </div>
+    <div class="stat-spacer"></div>
+    <div class="split-cell">
+      <select id="tx-cat" class="input-field">
+        <option value="Makan & Kopi">Makan &amp; Kopi</option>
+        <option value="Kebutuhan">Kebutuhan</option>
+        <option value="Hardware/IT">Hardware/IT</option>
+        <option value="Gaji/Proyek">Gaji/Proyek</option>
+        <option value="Lainnya">Lainnya</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- INPUT NOMINAL DENGAN FORMAT OTOMATIS IDR TITIK & KOMA -->
+  <input
+    type="text"
+    inputmode="decimal"
+    id="tx-amount"
+    class="input-field"
+    style="font-weight:800; letter-spacing:0.3px;"
+    placeholder="IDR 0 (Contoh: IDR 25.000,00)"
+    oninput="formatIdrLiveInput(this)"
+  >
+
+  <input type="text" id="tx-note" class="input-field" placeholder="Catatan transaksi...">
+  <button type="button" class="btn-full-dark" onclick="addTransaction()">+ Simpan Transaksi</button>
+</div>
+
+<div class="clean-card">
+  <div class="card-title-row">
+    <span class="ct-left">Riwayat Transaksi</span>
+  </div>
+  <div id="tx-list"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/finance.js') }}?v=14"></script>
+{% endblock %}
