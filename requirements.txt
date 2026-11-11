@@ -1,0 +1,7 @@
+Flask==3.0.3
+pymongo[srv]==4.8.0
+certifi==2024.8.30
+python-dotenv==1.0.1
+Werkzeug==3.0.4
+gunicorn==22.0.0
+waitress==3.0.0

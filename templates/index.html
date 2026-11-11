@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Charcoal" />
+    <title>Charcoal Audio &amp; Vault</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="top-nav">
+      <button class="top-nav-btn" onclick="switchTab('library')">
+        &#10094;
+      </button>
+      <div class="top-nav-title" id="header-view-title">Library</div>
+      <div class="db-badge" id="db-status">INIT</div>
+    </div>
+
+    <!-- VIEW 1: LIBRARY -->
+    <div id="view-library" class="view-section active">
+      <div class="album-hero">
+        <div class="album-thumb"></div>
+        <div class="album-info">
+          <div class="album-meta-top" id="lib-meta-summary">
+            Album &bull; 0 Lagu &bull; HTTP 206
+          </div>
+          <div class="album-main-title">Charcoal</div>
+          <div class="album-sub-artist">Splash Activity v2 Vault</div>
+          <div class="album-mini-actions">
+            <button class="icon-pill-btn" onclick="scanServerFolder()">
+              &#8635; Scan Server
+            </button>
+            <button class="icon-pill-btn" onclick="runServerDiagnostics()">
+              Diagnostik
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="dual-action-row">
+        <button class="action-pill primary" onclick="playAllFromStart()">
+          <span>&#9654;</span> Play
+        </button>
+        <button class="action-pill secondary" onclick="shuffleAndPlay()">
+          <span>&#8646;</span> Shuffle
+        </button>
+      </div>
+
+      <div class="tracklist-wrap" id="playlist-container"></div>
+    </div>
+
+    <!-- VIEW 2: NOW PLAYING -->
+    <div id="view-player" class="view-section">
+      <div class="np-artwork-wrap" id="np-art-box">
+        <div class="np-artwork-inner"></div>
+      </div>
+
+      <div class="np-title-row">
+        <button class="ctrl-icon-btn" onclick="runServerDiagnostics()">
+          &#9825;
+        </button>
+        <div class="np-center-text">
+          <div class="np-big-title" id="np-title">Belum Ada Lagu</div>
+          <div class="np-big-artist" id="np-meta">Pilih lagu dari Library</div>
+        </div>
+        <button class="ctrl-icon-btn" onclick="switchTab('sync')">
+          &bull;&bull;&bull;
+        </button>
+      </div>
+
+      <div class="waveform-box">
+        <div
+          class="waveform-bars"
+          id="waveform-container"
+          onclick="seekByWaveform(event)"
+        ></div>
+        <div class="waveform-times">
+          <span id="time-cur">0:00</span>
+          <span id="time-dur">0:00</span>
+        </div>
+      </div>
+
+      <div class="np-controls">
+        <button class="ctrl-icon-btn" onclick="shuffleAndPlay()">
+          &#8646;
+        </button>
+        <button class="ctrl-icon-btn" onclick="playPrevTrack()">
+          &#9664;&#9664;
+        </button>
+        <button
+          class="ctrl-play-circle"
+          id="btn-play-main"
+          onclick="togglePlayPause()"
+        >
+          &#9654;
+        </button>
+        <button class="ctrl-icon-btn" onclick="playNextTrack()">
+          &#9654;&#9654;
+        </button>
+        <button class="ctrl-icon-btn" id="btn-loop" onclick="toggleLoopMode()">
+          ALL
+        </button>
+      </div>
+    </div>
+
+    <!-- VIEW 3: SERVER SYNC & DIAGNOSTIC LOG -->
+    <div id="view-sync" class="view-section">
+      <div class="white-card">
+        <div class="card-head">
+          <span>Sinkronisasi music &amp; Cloud Link</span>
+          <span id="sync-badge" style="color: var(--accent-green)"
+            >HTTP 206 READY</span
+          >
+        </div>
+
+        <div class="dual-action-row" style="margin-bottom: 10px">
+          <button class="action-pill primary" onclick="scanServerFolder()">
+            Scan music
+          </button>
+          <button
+            class="action-pill secondary"
+            onclick="runServerDiagnostics()"
+          >
+            Cek Diagnostik
+          </button>
+        </div>
+
+        <input
+          type="file"
+          id="upload-mp3-input"
+          accept=".mp3,.m4a,.aac,.wav,.ogg"
+          class="input-clean"
+        />
+        <button
+          class="action-pill secondary"
+          style="width: 100%; height: 36px; margin-bottom: 10px"
+          onclick="uploadMp3ToServer()"
+        >
+          Upload File 100MB+ ke music
+        </button>
+
+        <input
+          type="text"
+          id="cloud-track-title"
+          class="input-clean"
+          placeholder="Judul Lagu Cloud (Opsional)"
+        />
+        <div style="display: flex; gap: 8px">
+          <input
+            type="text"
+            id="cloud-track-url"
+            class="input-clean"
+            style="flex: 2"
+            placeholder="https://.../lagu_100mb.mp3"
+          />
+          <input
+            type="number"
+            id="cloud-track-size"
+            class="input-clean"
+            style="flex: 1"
+            placeholder="MB"
+          />
+        </div>
+        <button
+          class="action-pill secondary"
+          style="width: 100%; height: 36px"
+          onclick="addCloudTrackLink()"
+        >
+          + Simpan Link Cloud ke MongoDB
+        </button>
+
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="sync-progress-bar"></div>
+        </div>
+
+        <div class="diag-summary-grid">
+          <div class="diag-stat-box">
+            <div class="diag-stat-val" id="stat-db-engine">-</div>
+            <div class="diag-stat-lbl">Database</div>
+          </div>
+          <div class="diag-stat-box">
+            <div class="diag-stat-val" id="stat-track-count">0</div>
+            <div class="diag-stat-lbl">Total Lagu</div>
+          </div>
+          <div class="diag-stat-box">
+            <div class="diag-stat-val" id="stat-total-mb">0 MB</div>
+            <div class="diag-stat-lbl">Ukuran MP3</div>
+          </div>
+        </div>
+
+        <div class="card-head" style="margin-top: 10px">
+          <span>Log Diagnostik Detail</span>
+          <button class="icon-pill-btn" onclick="copyDiagnosticLog()">
+            Salin Log
+          </button>
+        </div>
+        <div class="log-terminal" id="sync-log"></div>
+      </div>
+    </div>
+
+    <!-- VIEW 4: VAULT KEUANGAN -->
+    <div id="view-finance" class="view-section">
+      <div class="white-card">
+        <div class="card-head">
+          <span>Total Saldo Aktif</span>
+          <span id="tx-count-label">0 Transaksi</span>
+        </div>
+        <div class="fin-balance" id="total-balance">Rp 0</div>
+        <div class="diag-summary-grid">
+          <div class="diag-stat-box">
+            <div
+              class="diag-stat-val"
+              id="total-income"
+              style="color: var(--accent-green)"
+            >
+              Rp 0
+            </div>
+            <div class="diag-stat-lbl">Pemasukan</div>
+          </div>
+          <div class="diag-stat-box">
+            <div
+              class="diag-stat-val"
+              id="total-expense"
+              style="color: var(--accent-red)"
+            >
+              Rp 0
+            </div>
+            <div class="diag-stat-lbl">Pengeluaran</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="white-card">
+        <div class="card-head"><span>Catat Transaksi</span></div>
+        <div style="display: flex; gap: 8px">
+          <select id="tx-type" class="input-clean" style="flex: 1">
+            <option value="OUT">Pengeluaran (-)</option>
+            <option value="IN">Pemasukan (+)</option>
+          </select>
+          <select id="tx-cat" class="input-clean" style="flex: 1.2">
+            <option value="Makan & Kopi">Makan &amp; Kopi</option>
+            <option value="Kebutuhan">Kebutuhan</option>
+            <option value="Hardware/IT">Hardware/IT</option>
+            <option value="Gaji/Proyek">Gaji/Proyek</option>
+            <option value="Lainnya">Lainnya</option>
+          </select>
+        </div>
+        <input
+          type="number"
+          id="tx-amount"
+          class="input-clean"
+          placeholder="Nominal (Contoh: 25000)"
+        />
+        <input
+          type="text"
+          id="tx-note"
+          class="input-clean"
+          placeholder="Catatan transaksi..."
+        />
+        <button
+          class="action-pill primary"
+          style="width: 100%"
+          onclick="addTransaction()"
+        >
+          + Simpan Transaksi
+        </button>
+      </div>
+
+      <div class="white-card">
+        <div class="card-head"><span>Riwayat Transaksi</span></div>
+        <div id="tx-list"></div>
+      </div>
+    </div>
+
+    <audio
+      id="hw-audio"
+      preload="metadata"
+      playsinline
+      webkit-playsinline
+      style="display: none"
+    ></audio>
+
+    <div class="bottom-shell">
+      <div class="floating-mini-player" onclick="switchTab('player')">
+        <div class="mini-art"></div>
+        <div class="mini-text-col">
+          <div class="mini-song-title" id="mini-np-text">
+            Belum Ada Lagu Dipilih
+          </div>
+          <div class="mini-song-sub" id="mini-state-badge">
+            HTTP 206 Streamer Siap
+          </div>
+        </div>
+        <button
+          class="mini-play-pill"
+          id="mini-play-btn"
+          onclick="
+            event.stopPropagation();
+            togglePlayPause();
+          "
+        >
+          &#9654;
+        </button>
+      </div>
+
+      <div class="white-tab-dock">
+        <button
+          class="dock-tab active"
+          id="tab-btn-library"
+          onclick="switchTab('library')"
+        >
+          <span>&#9835;</span><span>Library</span>
+        </button>
+        <button
+          class="dock-tab"
+          id="tab-btn-player"
+          onclick="switchTab('player')"
+        >
+          <span>&#9654;</span><span>Playing</span>
+        </button>
+        <button class="dock-tab" id="tab-btn-sync" onclick="switchTab('sync')">
+          <span>&#8635;</span><span>Server</span>
+        </button>
+        <button
+          class="dock-tab"
+          id="tab-btn-finance"
+          onclick="switchTab('finance')"
+        >
+          <span>&#9672;</span><span>Vault Rp</span>
+        </button>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  </body>
+</html>

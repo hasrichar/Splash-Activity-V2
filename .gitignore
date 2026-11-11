@@ -1,21 +1,22 @@
-# Lingkungan Virtual Python & Cache
 venv/
 .venv/
 __pycache__/
 *.py[cod]
-
-# Rahasia & Konfigurasi Lokal (JANGAN DI-PUSH KE GITHUB)
 .env
+.mongo_secret
 *.db
 *.sqlite3
 
-# Abaikan file audio besar agar tidak ditolak limit 100MB GitHub,
-# tetapi tetap pertahankan struktur foldernya menggunakan .gitkeep
-static/mp3/*.mp3
-static/mp3/*.m4a
-static/mp3/*.wav
-static/mp3/*.ogg
+# Abaikan file audio besar di dalam folder music agar tidak ditolak limit 100MB GitHub
+music/*.mp3
+music/*.m4a
+music/*.aac
+music/*.wav
+music/*.ogg
+static/music/*.mp3
+static/music/*.m4a
+static/music/*.aac
+static/music/*.wav
+static/music/*.ogg
 
-# File sistem OS
 .DS_Store
-Thumbs.db
