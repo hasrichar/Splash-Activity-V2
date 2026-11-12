@@ -7,10 +7,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Buat folder static/music dan static/covers beserta izin tulis penuh untuk upload
 RUN mkdir -p static/music static/covers && chmod -R 777 static
 
-# Hugging Face Spaces wajib menggunakan port 7860
 ENV PORT=7860
 EXPOSE 7860
 
