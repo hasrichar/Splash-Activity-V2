@@ -6,8 +6,11 @@ from flask import url_for
 from pymongo import MongoClient, DESCENDING, ASCENDING
 from config import Config
 
-os.makedirs(Config.MP3_FOLDER, exist_ok=True)
-os.makedirs(Config.COVERS_FOLDER, exist_ok=True)
+try:
+    os.makedirs(Config.MP3_FOLDER, exist_ok=True)
+    os.makedirs(Config.COVERS_FOLDER, exist_ok=True)
+except OSError:
+    pass
 
 try:
     mongo_client = MongoClient(
