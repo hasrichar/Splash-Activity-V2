@@ -9,20 +9,20 @@ from werkzeug.utils import secure_filename
 from pymongo import DESCENDING, ASCENDING
 from config import Config
 from database import db, sync_music_folder, serialize_track, serialize_album
+import base64
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.config.from_object(Config)
 
 
+import base64
+
 def _save_cover_file(file_obj):
-    if not file_obj or not file_obj.filename:
-        return ""
-    ext = os.path.splitext(file_obj.filename)[1].lower()
-    if ext not in Config.ALLOWED_IMG_EXT:
-        return ""
-    safe_img = f"cov_{int(time.time() * 1000)}_{secure_filename(file_obj.filename)}"
-    file_obj.save(os.path.join(Config.COVERS_FOLDER, safe_img))
-    return url_for("static", filename=f"covers/{safe_img}")
+    if file_obj and file_obj.filename != '':
+        encoded_string = base64.b64encode(file_obj.read()).decode('utf-8')
+        mime_type = file_obj.content_type or 'image/jpeg'
+        return f"data:{mime_type};base64,{encoded_string}"
+    return ""
 
 
 def _ensure_album_exists(album_name, cover_url=""):
