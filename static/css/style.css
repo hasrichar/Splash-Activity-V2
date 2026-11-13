@@ -11,6 +11,9 @@
   --cream-accent: #F4F3EF;
   --green-ok: #10B981;
   --red-err: #EF4444;
+  --yellow-warn: #F59E0B;
+  --accent-blue: #2563EB;
+  --wallet-grad: linear-gradient(135deg, #4F46E5 0%, #2563EB 100%);
 }
 
 * {
@@ -21,6 +24,10 @@
   -webkit-tap-highlight-color: transparent;
   -webkit-user-select: none;
   user-select: none;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 html, body {
@@ -97,6 +104,7 @@ svg.svg-ic {
   height: 50px;
   margin: 0 auto;
   padding: 0 12px;
+  table-layout: fixed;
 }
 
 .th-cell {
@@ -104,21 +112,35 @@ svg.svg-ic {
   vertical-align: middle;
 }
 
-.th-left { width: 95px; text-align: left; }
-.th-center { text-align: center; }
-.th-right { width: 95px; text-align: right; }
+.th-left {
+  width: 90px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.th-center {
+  text-align: center;
+}
+
+.th-right {
+  width: 90px;
+  text-align: right;
+  white-space: nowrap;
+}
 
 .menu-trigger-btn {
   display: inline-block;
   height: 34px;
   line-height: 34px;
-  padding: 0 12px;
+  padding: 0 10px;
   border-radius: 17px;
   background: var(--bg-soft);
   border: 1px solid var(--border-line);
   color: var(--text-dark);
   font-size: 12px;
   font-weight: 800;
+  white-space: nowrap;
+  vertical-align: middle;
   -webkit-transition: -webkit-transform 0.15s ease, background 0.15s ease, color 0.15s ease;
   transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
@@ -147,6 +169,11 @@ svg.svg-ic {
   color: var(--text-dark);
   font-size: 11px;
   font-weight: 700;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
 }
 
 .status-mini-pill {
@@ -158,6 +185,7 @@ svg.svg-ic {
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.3px;
+  vertical-align: middle;
 }
 
 /* =========================================================
@@ -548,8 +576,17 @@ svg.svg-ic {
   background: var(--bg-card);
   border: 1px solid var(--border-line);
   color: var(--text-dark);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
+  line-height: 1.2;
+  margin: 0 2px;
+  vertical-align: middle;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+
+.pill-mini-btn:active {
+  background: var(--bg-soft);
 }
 
 .track-row-item {
@@ -629,34 +666,148 @@ svg.svg-ic {
 .clean-card {
   background: var(--bg-card);
   border-radius: 20px;
-  padding: 15px;
-  margin-bottom: 12px;
+  padding: 16px;
+  margin-bottom: 14px;
   border: 1px solid var(--border-line);
+  box-shadow: 0 2px 10px rgba(20, 23, 31, 0.04);
+  scroll-margin-top: 62px;
+  -webkit-transition: -webkit-transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+@-webkit-keyframes sectionPopGlow {
+  0% {
+    -webkit-transform: scale(1);
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
+    border-color: var(--border-line);
+  }
+  30% {
+    -webkit-transform: scale(1.025);
+    transform: scale(1.025);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.25), 0 0 0 4px rgba(37, 99, 235, 0.3);
+    border-color: var(--accent-blue);
+  }
+  65% {
+    -webkit-transform: scale(0.995);
+    transform: scale(0.995);
+    box-shadow: 0 3px 12px rgba(37, 99, 235, 0.15), 0 0 0 2px rgba(37, 99, 235, 0.18);
+    border-color: var(--accent-blue);
+  }
+  100% {
+    -webkit-transform: scale(1);
+    transform: scale(1);
+    box-shadow: none;
+    border-color: var(--border-line);
+  }
+}
+
+@keyframes sectionPopGlow {
+  0% {
+    -webkit-transform: scale(1);
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
+    border-color: var(--border-line);
+  }
+  30% {
+    -webkit-transform: scale(1.025);
+    transform: scale(1.025);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.25), 0 0 0 4px rgba(37, 99, 235, 0.3);
+    border-color: var(--accent-blue);
+  }
+  65% {
+    -webkit-transform: scale(0.995);
+    transform: scale(0.995);
+    box-shadow: 0 3px 12px rgba(37, 99, 235, 0.15), 0 0 0 2px rgba(37, 99, 235, 0.18);
+    border-color: var(--accent-blue);
+  }
+  100% {
+    -webkit-transform: scale(1);
+    transform: scale(1);
+    box-shadow: none;
+    border-color: var(--border-line);
+  }
+}
+
+.section-highlight-active {
+  -webkit-animation: sectionPopGlow 0.85s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  animation: sectionPopGlow 0.85s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  position: relative;
+  z-index: 10;
 }
 
 .card-title-row {
   display: table;
   width: 100%;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-line);
 }
 
 .ct-left {
   display: table-cell;
   vertical-align: middle;
-  font-size: 10px;
+  font-size: 13.5px;
   font-weight: 800;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  color: var(--text-dark);
+  letter-spacing: -0.2px;
+}
+
+.card-badge-icon {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  line-height: 28px;
+  text-align: center;
+  border-radius: 9px;
+  font-size: 14px;
+  margin-right: 8px;
+  vertical-align: middle;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.badge-blue { background: #EFF6FF; border: 1px solid #DBEAFE; }
+.badge-purple { background: #F5F3FF; border: 1px solid #EDE9FE; }
+.badge-amber { background: #FFFBEB; border: 1px solid #FEF3C7; }
+.badge-emerald { background: #ECFDF5; border: 1px solid #D1FAE5; }
+.badge-indigo { background: #EEF2FF; border: 1px solid #E0E7FF; }
+.badge-slate { background: #F1F5F9; border: 1px solid #E2E8F0; }
+
+/* Distinct Card Top Accent Borders - Instant Recognizability */
+.card-accounts { border-top: 3.5px solid #2563EB !important; }
+.card-analytics { border-top: 3.5px solid #7C3AED !important; }
+.card-budget { border-top: 3.5px solid #D97706 !important; }
+.card-bills { border-top: 3.5px solid #059669 !important; }
+.card-input-tx { border-top: 3.5px solid #4F46E5 !important; }
+.card-history { border-top: 3.5px solid #475569 !important; }
+
+/* Micro action button variants with generous touch targets */
+.btn-mini-green {
+  background: #ECFDF5 !important;
+  border-color: #A7F3D0 !important;
+  color: #059669 !important;
+}
+
+.btn-mini-danger {
+  background: #FEF2F2 !important;
+  border-color: #FECACA !important;
+  color: #DC2626 !important;
+}
+
+.card-title-text {
+  vertical-align: middle;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text-dark);
 }
 
 .ct-right {
   display: table-cell;
   vertical-align: middle;
   text-align: right;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  color: var(--text-light);
+  color: var(--text-muted);
 }
 
 .big-balance-num {
@@ -791,9 +942,11 @@ svg.svg-ic {
 }
 
 .tx-row-item {
-  display: table;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   width: 100%;
-  padding: 10px 0;
+  padding: 11px 0;
   border-bottom: 1px solid var(--bg-soft);
 }
 
@@ -802,14 +955,13 @@ svg.svg-ic {
 }
 
 .tx-cell-info {
-  display: table-cell;
-  vertical-align: middle;
+  flex: 1;
+  min-width: 0;
 }
 
 .tx-cell-amt {
-  display: table-cell;
-  vertical-align: middle;
   text-align: right;
+  flex-shrink: 0;
   white-space: nowrap;
 }
 
@@ -1010,4 +1162,570 @@ svg.svg-ic {
   font-size: 10px;
   font-weight: 700;
   color: var(--text-dark);
+}
+
+/* =========================================================
+   5. HERO WALLET CARD (GRADIENT BIRU-UNGU)
+   ========================================================= */
+.wallet-hero-card {
+  position: relative;
+  border-radius: 20px;
+  background: var(--wallet-grad);
+  color: #FFFFFF;
+  padding: 18px 16px 14px 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25);
+  overflow: hidden;
+}
+
+.wallet-hero-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+
+.wallet-greeting {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.wallet-sub {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 2px;
+}
+
+.wallet-growth-pill {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.22);
+  color: #FFFFFF;
+}
+
+.wallet-big-balance {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #FFFFFF;
+  margin: 6px 0 12px 0;
+}
+
+.wallet-flow-row {
+  display: flex;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.16);
+  border-radius: 14px;
+  padding: 9px 12px;
+  margin-bottom: 12px;
+}
+
+.wf-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wf-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 13px;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+.wf-in {
+  background: rgba(16, 185, 129, 0.28);
+  color: #34D399;
+}
+
+.wf-out {
+  background: rgba(239, 68, 68, 0.28);
+  color: #F87171;
+}
+
+.wf-lbl {
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.75);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.wf-val {
+  font-size: 12px;
+  font-weight: 800;
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wallet-quick-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: space-between;
+  margin: 0 -3px;
+}
+
+.wq-btn {
+  flex: 1;
+  display: inline-block;
+  text-align: center;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.18);
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 8px 4px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  margin: 0 3px;
+  -webkit-transition: -webkit-transform 0.15s ease, background 0.15s ease;
+  transition: transform 0.15s ease, background 0.15s ease;
+  cursor: pointer;
+}
+
+.wq-btn:active {
+  background: rgba(255, 255, 255, 0.38);
+  -webkit-transform: scale(0.92);
+  transform: scale(0.92);
+}
+
+/* =========================================================
+   7. ALERT BANNER OTOMATIS
+   ========================================================= */
+.alert-banner {
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.alert-banner.warn {
+  background: #FEF3C7;
+  color: #92400E;
+  border: 1px solid #FCD34D;
+}
+
+.alert-banner.danger {
+  background: #FEE2E2;
+  color: #991B1B;
+  border: 1px solid #FCA5A5;
+}
+
+/* =========================================================
+   8. PELACAKAN REKENING & INVESTASI
+   ========================================================= */
+.accounts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.acc-card {
+  background: var(--bg-soft);
+  border: 1px solid var(--border-line);
+  border-radius: 14px;
+  padding: 12px 10px;
+  position: relative;
+}
+
+.acc-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.acc-card-name {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--text-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 4px 0 2px 0;
+}
+
+.acc-card-val {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin-top: 4px;
+}
+
+/* =========================================================
+   9. QUICK CHIPS TEMPLATE TRANSAKSI
+   ========================================================= */
+.quick-chips-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chip-btn {
+  display: inline-block;
+  white-space: nowrap;
+  background: var(--bg-soft);
+  color: var(--text-dark);
+  border: 1px solid var(--border-line);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 11px;
+  border-radius: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-right: 6px;
+  margin-bottom: 4px;
+}
+
+.chip-btn:active {
+  background: var(--border-line);
+}
+
+/* =========================================================
+   10. VISUALISASI & ANALISIS DATA (DIAGRAM PAI & BATANG)
+   ========================================================= */
+.chart-subtitle {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.bar-chart-wrap {
+  width: 100%;
+  min-height: 120px;
+}
+
+.pie-layout-table {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.pie-svg-cell {
+  display: table-cell;
+  width: 120px;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.pie-legend-cell {
+  display: table-cell;
+  vertical-align: middle;
+  padding-left: 10px;
+}
+
+.pie-leg-item {
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  margin-bottom: 5px;
+  gap: 6px;
+}
+
+.pie-leg-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  margin-right: 6px;
+}
+
+.pie-leg-name {
+  flex: 1;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pie-leg-val {
+  font-weight: 700;
+  color: var(--text-dark);
+  white-space: nowrap;
+}
+
+/* =========================================================
+   11. PENGANGGARAN (BUDGETING) BARS
+   ========================================================= */
+.budget-item {
+  margin-bottom: 12px;
+}
+
+.budget-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 11px;
+  margin-bottom: 5px;
+}
+
+.budget-item-name {
+  font-weight: 800;
+  color: var(--text-dark);
+  padding-right: 8px;
+}
+
+.budget-item-amt {
+  color: var(--text-muted);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.budget-bar-track {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-soft);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border-line);
+}
+
+.budget-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.budget-bar-fill.normal { background: var(--green-ok); }
+.budget-bar-fill.warn { background: var(--yellow-warn); }
+.budget-bar-fill.danger { background: var(--red-err); }
+
+/* =========================================================
+   12. PENGINGAT TAGIHAN
+   ========================================================= */
+.bill-row-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-line);
+}
+
+.bill-row-item:last-child {
+  border-bottom: none;
+}
+
+.bill-due-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2.5px 7px;
+  border-radius: 8px;
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 8px;
+  margin-top: 3px;
+}
+
+.bill-due-badge.urgent {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+.bill-due-badge.soon {
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+.bill-due-badge.paid {
+  background: #D1FAE5;
+  color: #059669;
+}
+
+.tx-receipt-thumb {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: cover;
+  margin-right: 6px;
+  vertical-align: middle;
+  border: 1px solid var(--border-line);
+}
+
+/* =========================================================
+   13. SKELETON SCREEN (SHIMMER) & PROGRESSIVE LOADING
+   ========================================================= */
+@-webkit-keyframes shimmerEffect {
+  0% {
+    background-position: -250px 0;
+  }
+  100% {
+    background-position: 250px 0;
+  }
+}
+
+@keyframes shimmerEffect {
+  0% {
+    background-position: -250px 0;
+  }
+  100% {
+    background-position: 250px 0;
+  }
+}
+
+.shimmer-block {
+  background: #E5E7EB;
+  background-image: linear-gradient(
+    90deg,
+    rgba(229, 231, 235, 1) 0%,
+    rgba(243, 244, 246, 0.9) 35%,
+    rgba(255, 255, 255, 0.95) 50%,
+    rgba(243, 244, 246, 0.9) 65%,
+    rgba(229, 231, 235, 1) 100%
+  );
+  background-size: 500px 100%;
+  background-repeat: no-repeat;
+  -webkit-animation: shimmerEffect 1.4s infinite linear;
+  animation: shimmerEffect 1.4s infinite linear;
+}
+
+.skeleton-album-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-line);
+  border-radius: 18px;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.skeleton-track-row {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+  padding: 10px 10px;
+  border-radius: 16px;
+  margin-bottom: 5px;
+  background: transparent;
+}
+
+.skeleton-art-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: block;
+}
+
+.skeleton-thumb-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: block;
+}
+
+.skeleton-bar-title {
+  height: 12px;
+  border-radius: 6px;
+  width: 65%;
+  margin-bottom: 6px;
+}
+
+.skeleton-bar-sub {
+  height: 9px;
+  border-radius: 5px;
+  width: 42%;
+}
+
+.skeleton-pill-btn {
+  display: inline-block;
+  width: 44px;
+  height: 22px;
+  border-radius: 11px;
+}
+
+/* Progressive Loading Animations */
+@-webkit-keyframes progressiveFadeIn {
+  0% {
+    opacity: 0;
+    -webkit-transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    -webkit-transform: translateY(0);
+  }
+}
+
+@keyframes progressiveFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.progressive-fade-in {
+  -webkit-animation: progressiveFadeIn 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  animation: progressiveFadeIn 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.progressive-img {
+  opacity: 0;
+  -webkit-transition: opacity 0.35s ease-in-out;
+  transition: opacity 0.35s ease-in-out;
+}
+
+.progressive-img.img-ready {
+  opacity: 1;
+}
+
+/* =========================================================
+   14. PRIVASI SALDO & ENHANCED FINANCE UI
+   ========================================================= */
+.privacy-eye-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  padding: 0 4px;
+  margin-left: 6px;
+  line-height: 1;
+  vertical-align: middle;
+  opacity: 0.85;
+  -webkit-transition: opacity 0.2s;
+  transition: opacity 0.2s;
+}
+
+.privacy-eye-btn:active {
+  opacity: 0.5;
+}
+
+.amt-trf {
+  color: #3B82F6;
+  font-weight: 800;
 }

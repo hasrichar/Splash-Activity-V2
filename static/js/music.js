@@ -4,31 +4,112 @@ var currentTrackIndex = -1;
 var loopMode = "ALL";
 var hwAudio = null;
 var expandedAlbums = {};
+var renderLibraryToken = 0;
 
 var SVG_PLAY = '<svg class="svg-ic" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
 var SVG_PAUSE = '<svg class="svg-ic" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
 var SVG_MORE = '<svg class="svg-ic" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>';
 
+function renderMusicLibrarySkeletons() {
+  var albumsWrap = document.getElementById("albums-section-wrap");
+  var albumsContainer = document.getElementById("albums-container");
+  var ungroupedContainer = document.getElementById("playlist-container");
+  var albumsTitle = document.getElementById("albums-count-title");
+  var ungroupedTitle = document.getElementById("lib-meta-summary");
+
+  if (albumsWrap) albumsWrap.style.display = "block";
+  if (albumsTitle) albumsTitle.textContent = "Grup Album (Memuat...)";
+  if (ungroupedTitle) ungroupedTitle.textContent = "Daftar Lagu (Memuat...)";
+
+  if (albumsContainer) {
+    var albHtml = "";
+    for (var a = 0; a < 2; a++) {
+      albHtml +=
+        '<div class="skeleton-album-card">' +
+          '<div class="ag-col-art"><div class="skeleton-art-box shimmer-block"></div></div>' +
+          '<div class="ag-col-info">' +
+            '<div class="skeleton-bar-title shimmer-block"></div>' +
+            '<div class="skeleton-bar-sub shimmer-block"></div>' +
+          '</div>' +
+          '<div class="ag-col-btn" style="width:115px; text-align:right;">' +
+            '<div class="skeleton-pill-btn shimmer-block" style="margin-right:4px;"></div>' +
+            '<div class="skeleton-pill-btn shimmer-block"></div>' +
+          '</div>' +
+        '</div>';
+    }
+    albumsContainer.innerHTML = albHtml;
+  }
+
+  if (ungroupedContainer) {
+    var trHtml = "";
+    for (var t = 0; t < 5; t++) {
+      trHtml +=
+        '<div class="skeleton-track-row">' +
+          '<div class="tr-col-thumb"><div class="skeleton-thumb-box shimmer-block"></div></div>' +
+          '<div class="tr-col-info">' +
+            '<div class="skeleton-bar-title shimmer-block" style="width:' + (55 + (t % 3) * 12) + '%;"></div>' +
+            '<div class="skeleton-bar-sub shimmer-block" style="width:' + (35 + (t % 2) * 15) + '%;"></div>' +
+          '</div>' +
+          '<div class="tr-col-act">' +
+            '<div class="skeleton-thumb-box shimmer-block" style="width:24px; height:24px; border-radius:12px; margin-left:auto;"></div>' +
+          '</div>' +
+        '</div>';
+    }
+    ungroupedContainer.innerHTML = trHtml;
+  }
+}
+
 function fetchTracksAndAlbums() {
+  renderMusicLibrarySkeletons();
+
+  var albumsDone = false;
+  var tracksDone = false;
+
+  function onAllFetched() {
+    if (albumsDone && tracksDone) {
+      var badge = document.getElementById("menu-track-badge");
+      if (badge) badge.textContent = playlistCache.length;
+      renderMusicLibraryUI();
+    }
+  }
+
   var xhr1 = new XMLHttpRequest();
   xhr1.open("GET", "/api/albums?t=" + new Date().getTime(), true);
   xhr1.onload = function() {
     if (xhr1.status >= 200 && xhr1.status < 300) {
-      registeredAlbums = JSON.parse(xhr1.responseText).albums || [];
-    }
-    var xhr2 = new XMLHttpRequest();
-    xhr2.open("GET", "/api/tracks?t=" + new Date().getTime(), true);
-    xhr2.onload = function() {
-      if (xhr2.status >= 200 && xhr2.status < 300) {
-        playlistCache = JSON.parse(xhr2.responseText).tracks || [];
-        var badge = document.getElementById("menu-track-badge");
-        if (badge) badge.textContent = playlistCache.length;
-        renderMusicLibraryUI();
+      try {
+        registeredAlbums = JSON.parse(xhr1.responseText).albums || [];
+      } catch (e) {
+        registeredAlbums = [];
       }
-    };
-    xhr2.send();
+    }
+    albumsDone = true;
+    onAllFetched();
+  };
+  xhr1.onerror = function() {
+    albumsDone = true;
+    onAllFetched();
   };
   xhr1.send();
+
+  var xhr2 = new XMLHttpRequest();
+  xhr2.open("GET", "/api/tracks?t=" + new Date().getTime(), true);
+  xhr2.onload = function() {
+    if (xhr2.status >= 200 && xhr2.status < 300) {
+      try {
+        playlistCache = JSON.parse(xhr2.responseText).tracks || [];
+      } catch (e) {
+        playlistCache = [];
+      }
+    }
+    tracksDone = true;
+    onAllFetched();
+  };
+  xhr2.onerror = function() {
+    tracksDone = true;
+    onAllFetched();
+  };
+  xhr2.send();
 }
 
 function quickScanMusic() {
@@ -40,12 +121,15 @@ function quickScanMusic() {
 
 function createTrackRowElement(tr, globalIdx) {
   var row = document.createElement("div");
-  row.className = (globalIdx === currentTrackIndex) ? "track-row-item active" : "track-row-item";
+  row.className = ((globalIdx === currentTrackIndex) ? "track-row-item active" : "track-row-item") + " progressive-fade-in";
   row.onclick = function() { playTrackAtIndex(globalIdx); };
 
-  var thumbContent = tr.cover_url
-    ? '<img class="tr-thumb-img" src="' + escapeHtml(tr.cover_url) + '" alt="">'
-    : (globalIdx + 1);
+  var thumbContent;
+  if (tr.cover_url) {
+    thumbContent = '<img class="tr-thumb-img progressive-img" src="' + escapeHtml(tr.cover_url) + '" alt="" onload="this.className+=\' img-ready\'" onerror="this.style.display=\'none\'">';
+  } else {
+    thumbContent = (globalIdx + 1);
+  }
 
   var subText = tr.album
     ? (escapeHtml(tr.album) + " &bull; " + tr.size_mb + " MB")
@@ -111,10 +195,10 @@ function renderMusicLibraryUI() {
         var albumCover = albumCoverMap[albName] || "";
 
         var card = document.createElement("div");
-        card.className = "album-group-card";
+        card.className = "album-group-card progressive-fade-in";
 
         var artHtml = albumCover
-          ? '<img class="ag-art-img" src="' + escapeHtml(albumCover) + '" alt="">'
+          ? '<img class="ag-art-img progressive-img" src="' + escapeHtml(albumCover) + '" alt="" onload="this.className+=\' img-ready\'" onerror="this.style.display=\'none\'">'
           : escapeHtml(albName.charAt(0).toUpperCase());
 
         var playBtnHtml = idxList.length > 0
@@ -154,9 +238,12 @@ function renderMusicLibraryUI() {
     albumsWrap.style.display = "none";
   }
 
-  // 2. Render Lagu di Luar Album
+  // 2. Render Lagu di Luar Album (Progressive Chunked Loading)
   document.getElementById("lib-meta-summary").textContent =
     "Lagu di Luar Album (" + ungroupedIndices.length + " Lagu)";
+
+  renderLibraryToken++;
+  var currentToken = renderLibraryToken;
 
   if (ungroupedIndices.length === 0) {
     ungroupedContainer.innerHTML =
@@ -166,10 +253,20 @@ function renderMusicLibraryUI() {
           : 'Semua lagu sudah berada di dalam grup Album di atas.') +
       '</div>';
   } else {
-    for (var u = 0; u < ungroupedIndices.length; u++) {
-      var gIdx = ungroupedIndices[u];
-      ungroupedContainer.appendChild(createTrackRowElement(playlistCache[gIdx], gIdx));
+    var CHUNK_SIZE = 12;
+    var uIdx = 0;
+    function renderNextTrackChunk() {
+      if (currentToken !== renderLibraryToken) return;
+      var limit = Math.min(uIdx + CHUNK_SIZE, ungroupedIndices.length);
+      for (; uIdx < limit; uIdx++) {
+        var gIdx = ungroupedIndices[uIdx];
+        ungroupedContainer.appendChild(createTrackRowElement(playlistCache[gIdx], gIdx));
+      }
+      if (uIdx < ungroupedIndices.length) {
+        setTimeout(renderNextTrackChunk, 16);
+      }
     }
+    renderNextTrackChunk();
   }
 }
 
@@ -373,11 +470,16 @@ function updateNowPlayingCover(track) {
   var imgEl = document.getElementById("np-cover-img");
   var dotEl = document.getElementById("np-art-dot");
   if (track && track.cover_url) {
+    imgEl.className = "progressive-img";
+    imgEl.onload = function() {
+      imgEl.className = "progressive-img img-ready";
+    };
     imgEl.src = track.cover_url;
     imgEl.style.display = "block";
     dotEl.style.display = "none";
   } else {
     imgEl.src = "";
+    imgEl.className = "";
     imgEl.style.display = "none";
     dotEl.style.display = "block";
   }

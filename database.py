@@ -25,6 +25,17 @@ try:
     db.tracks.create_index([("album", ASCENDING)])
     db.albums.create_index([("name", ASCENDING)], unique=True)
     db.transactions.create_index([("timestamp", DESCENDING)])
+    db.budgets.create_index([("category", ASCENDING)], unique=True)
+    db.accounts.create_index([("name", ASCENDING)], unique=True)
+    db.bills.create_index([("due_day", ASCENDING)])
+
+    if db.accounts.count_documents({}) == 0:
+        db.accounts.insert_many([
+            {"name": "Rekening Bank", "type": "Bank", "initial_balance": 5000000, "created_at": int(time.time() * 1000)},
+            {"name": "E-Wallet", "type": "E-Wallet", "initial_balance": 500000, "created_at": int(time.time() * 1000)},
+            {"name": "Kas Tunai", "type": "Tunai", "initial_balance": 250000, "created_at": int(time.time() * 1000)},
+            {"name": "Portofolio Investasi", "type": "Investasi", "initial_balance": 10000000, "created_at": int(time.time() * 1000)}
+        ])
     print(f"[MONGODB OK] Terhubung ke database '{Config.MONGO_DB_NAME}'!")
 except Exception as e:
     safe_err = re.sub(r"://([^:]+):([^@]+)@", r"://\1:********@", str(e))

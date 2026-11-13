@@ -1,49 +1,248 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="clean-card">
-  <div class="card-title-row">
-    <span class="ct-left">Total Saldo Aktif</span>
-    <span class="ct-right" id="tx-count-label">0 Transaksi</span>
+<!-- HERO WALLET CARD (BLUE GRADIENT SEPERTI DESAIN REFERENSI) -->
+<div class="wallet-hero-card">
+  <div class="wallet-hero-top">
+    <div>
+      <div style="display:flex; align-items:center;">
+        <span class="wallet-greeting">Total Aset &amp; Saldo Aktif</span>
+        <button type="button" id="privacy-toggle-btn" class="privacy-eye-btn" onclick="togglePrivacyMode()" title="Sembunyikan / Tampilkan Nominal">👁️</button>
+      </div>
+      <div class="wallet-sub" id="tx-count-label">0 Transaksi • Sinkronisasi Aktif</div>
+    </div>
+    <span class="wallet-growth-pill" id="cashflow-ratio-pill">+0% Rasio</span>
   </div>
-  <div class="big-balance-num" id="total-balance">IDR 0</div>
-  <div class="stat-table-grid">
-    <div class="stat-cell">
-      <div class="stat-val" id="total-income" style="color:var(--green-ok);">IDR 0</div>
-      <div class="stat-lbl">Pemasukan</div>
+
+  <div class="wallet-big-balance" id="total-balance">IDR 0</div>
+
+  <div class="wallet-flow-row">
+    <div class="wf-item">
+      <span class="wf-dot wf-in">↗</span>
+      <div>
+        <div class="wf-lbl">Pemasukan</div>
+        <div class="wf-val" id="total-income">IDR 0</div>
+      </div>
     </div>
-    <div class="stat-spacer"></div>
-    <div class="stat-cell">
-      <div class="stat-val" id="total-expense" style="color:var(--red-err);">IDR 0</div>
-      <div class="stat-lbl">Pengeluaran</div>
+    <div class="wf-item">
+      <span class="wf-dot wf-out">↘</span>
+      <div>
+        <div class="wf-lbl">Pengeluaran</div>
+        <div class="wf-val" id="total-expense">IDR 0</div>
+      </div>
     </div>
+  </div>
+
+  <!-- TOMBOL AKSI CEPAT (QUICK PILLS) -->
+  <div class="wallet-quick-actions">
+    <a href="#section-input-tx" class="wq-btn" onclick="scrollToFinanceSection(event, 'section-input-tx')">＋ Catat</a>
+    <a href="#section-accounts" class="wq-btn" onclick="scrollToFinanceSection(event, 'section-accounts')">💳 Rekening</a>
+    <a href="#section-budget" class="wq-btn" onclick="scrollToFinanceSection(event, 'section-budget')">🎯 Budget</a>
+    <a href="#section-bills" class="wq-btn" onclick="scrollToFinanceSection(event, 'section-bills')">🔔 Tagihan</a>
   </div>
 </div>
 
-<div class="clean-card">
+<!-- ALERT BANNER OTOMATIS (MUNCUL JIKA BUDGET >= 80% ATAU TAGIHAN JATUH TEMPO) -->
+<div id="finance-alert-banner" class="alert-banner" style="display:none;"></div>
+
+<!-- FITUR 3: PELACAKAN REKENING BANK, E-WALLET & INVESTASI -->
+<div class="clean-card card-accounts" id="section-accounts">
   <div class="card-title-row">
-    <span class="ct-left">Catat Transaksi Baru</span>
+    <div class="ct-left">
+      <span class="card-badge-icon badge-blue">💳</span>
+      <span class="card-title-text">Pelacakan Rekening &amp; Investasi</span>
+    </div>
+    <div class="ct-right">
+      <button type="button" class="pill-mini-btn" onclick="toggleAddAccountBox()">+ Akun/Aset</button>
+    </div>
   </div>
+
+  <div id="add-account-box" style="display:none; margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid var(--border-line);">
+    <div class="split-2-table">
+      <div class="split-cell">
+        <input type="text" id="acc-name" class="input-field" placeholder="Nama (BCA / GoPay / Bibit)">
+      </div>
+      <div class="stat-spacer"></div>
+      <div class="split-cell">
+        <select id="acc-type" class="input-field">
+          <option value="Bank">🏦 Rekening Bank</option>
+          <option value="E-Wallet">📱 Dompet Digital</option>
+          <option value="Investasi">📈 Akun Investasi</option>
+          <option value="Tunai">💵 Kas Tunai</option>
+        </select>
+      </div>
+    </div>
+    <input type="text" inputmode="decimal" id="acc-balance" class="input-field" placeholder="Saldo Awal (IDR 0)" oninput="formatIdrLiveInput(this)">
+    <button type="button" class="btn-full-dark" onclick="saveAccountAsset()">Simpan Akun Aset</button>
+  </div>
+
+  <div id="accounts-grid" class="accounts-grid"></div>
+</div>
+
+<!-- FITUR 5: VISUALISASI & ANALISIS DATA (DIAGRAM PAI & BATANG) -->
+<div class="clean-card card-analytics" id="section-analytics">
+  <div class="card-title-row">
+    <div class="ct-left">
+      <span class="card-badge-icon badge-purple">📊</span>
+      <span class="card-title-text">Visualisasi Arus Uang</span>
+    </div>
+    <div class="ct-right">
+      <select id="chart-month-filter" class="pill-mini-btn" onchange="renderFinanceCharts()">
+        <option value="ALL">Semua Bulan</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- DIAGRAM BATANG PEMASUKAN VS PENGELUARAN -->
+  <div class="chart-subtitle">Perbandingan Arus Kas</div>
+  <div id="bar-chart-container" class="bar-chart-wrap"></div>
+
+  <!-- DIAGRAM PAI / DONAT PROPORSI KATEGORI -->
+  <div class="chart-subtitle" style="margin-top:12px;">Distribusi Pengeluaran per Kategori</div>
+  <div class="pie-layout-table">
+    <div class="pie-svg-cell" id="pie-chart-svg"></div>
+    <div class="pie-legend-cell" id="pie-chart-legend"></div>
+  </div>
+</div>
+
+<!-- FITUR 2: PENGANGGARAN (BUDGETING) DENGAN SISTEM PERINGATAN -->
+<div class="clean-card card-budget" id="section-budget">
+  <div class="card-title-row">
+    <div class="ct-left">
+      <span class="card-badge-icon badge-amber">🎯</span>
+      <span class="card-title-text">Penganggaran (Budgeting)</span>
+    </div>
+    <div class="ct-right" id="budget-status-badge">Aman</div>
+  </div>
+
+  <div class="split-2-table">
+    <div class="split-cell" style="width:45%;">
+      <select id="budget-cat-select" class="input-field">
+        <option value="TOTAL">Semua Kategori (Total)</option>
+        <option value="Makan & Kopi">Makan &amp; Kopi</option>
+        <option value="Kebutuhan">Kebutuhan</option>
+        <option value="Hardware/IT">Hardware/IT</option>
+        <option value="Tagihan & Cicilan">Tagihan &amp; Cicilan</option>
+        <option value="Lainnya">Lainnya</option>
+      </select>
+    </div>
+    <div class="stat-spacer"></div>
+    <div class="split-cell" style="width:53%;">
+      <input type="text" inputmode="decimal" id="budget-limit-input" class="input-field" placeholder="Batas IDR (Contoh: IDR 2.000.000,00)" oninput="formatIdrLiveInput(this)">
+    </div>
+  </div>
+  <button type="button" class="btn-full-soft" onclick="saveBudgetLimit()">Tetapkan Batas Anggaran</button>
+
+  <div id="budget-bars-list" style="margin-top:10px;"></div>
+</div>
+
+<!-- FITUR 4: PENGINGAT TAGIHAN & PEMBAYARAN -->
+<div class="clean-card card-bills" id="section-bills">
+  <div class="card-title-row">
+    <div class="ct-left">
+      <span class="card-badge-icon badge-emerald">🔔</span>
+      <span class="card-title-text">Pengingat Tagihan Rutin</span>
+    </div>
+    <div class="ct-right">
+      <select id="bills-month-filter" class="pill-mini-btn" onchange="renderBillsUI()" style="margin-right:6px;">
+        <option value="CURRENT">Bulan Ini</option>
+        <option value="ALL">Semua Bulan</option>
+      </select>
+      <button type="button" class="pill-mini-btn" onclick="toggleAddBillBox()">+ Jadwal Tagihan</button>
+    </div>
+  </div>
+
+  <div id="add-bill-box" style="display:none; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border-line);">
+    <input type="text" id="bill-name" class="input-field" placeholder="Nama Tagihan (Contoh: PLN Listrik / WiFi / Spotify)">
+    <div class="split-2-table">
+      <div class="split-cell" style="width:62%;">
+        <input type="text" inputmode="decimal" id="bill-amount" class="input-field" placeholder="Nominal IDR" oninput="formatIdrLiveInput(this)">
+      </div>
+      <div class="stat-spacer"></div>
+      <div class="split-cell" style="width:36%;">
+        <input type="number" id="bill-due-day" class="input-field" min="1" max="31" placeholder="Tgl Tempo (1-31)">
+      </div>
+    </div>
+
+    <div class="split-2-table">
+      <div class="split-cell">
+        <select id="bill-month-select" class="input-field"></select>
+      </div>
+      <div class="stat-spacer"></div>
+      <div class="split-cell">
+        <select id="bill-account-select" class="input-field"></select>
+      </div>
+    </div>
+
+    <div style="margin:6px 0 10px 0; background:var(--bg-soft); padding:8px 12px; border-radius:12px; display:table; width:100%; box-sizing:border-box;">
+      <label style="display:table-cell; vertical-align:middle; font-size:12px; font-weight:700; color:var(--text-dark); cursor:pointer;" for="bill-is-recurring">
+        🔁 Ulangi Pengingat Tiap Bulan (Berulang)
+      </label>
+      <div style="display:table-cell; vertical-align:middle; width:44px; text-align:right;">
+        <input type="checkbox" id="bill-is-recurring" checked style="width:18px; height:18px; cursor:pointer;">
+      </div>
+    </div>
+
+    <button type="button" class="btn-full-dark" onclick="addBillReminder()">+ Simpan Pengingat Tagihan</button>
+  </div>
+
+  <div id="bills-summary-bar" style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:8px; padding:0 2px;"></div>
+  <div id="bills-list"></div>
+</div>
+
+<!-- FITUR 1: PENCATATAN TRANSAKSI (MANUAL, TEMPLATE OTOMATIS & SCAN STRUK) -->
+<div class="clean-card card-input-tx" id="section-input-tx">
+  <div class="card-title-row">
+    <div class="ct-left">
+      <span class="card-badge-icon badge-indigo">📝</span>
+      <span class="card-title-text">Catat Transaksi Baru</span>
+    </div>
+    <div class="ct-right">
+      <span style="font-size:10px; font-weight:700; color:var(--text-muted);">Manual / Struk / Transfer</span>
+    </div>
+  </div>
+
+  <!-- TEMPLATE OTOMATIS 1-KLIK -->
+  <div class="quick-chips-row">
+    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Makan & Kopi','25000','Kopi & Snack')">☕ Kopi 25rb</button>
+    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Tagihan & Cicilan','150000','Langganan Bulanan')">🎵 Langganan</button>
+    <button type="button" class="chip-btn" onclick="fillQuickTx('IN','Gaji/Proyek','5000000','Pemasukan Gaji/Proyek')">💰 Gaji/Proyek</button>
+    <button type="button" class="chip-btn" onclick="fillQuickTx('TRF','Transfer Antar Rekening','100000','Pindah Dana')">⇄ Pindah Dana</button>
+  </div>
+
   <div class="split-2-table">
     <div class="split-cell">
-      <select id="tx-type" class="input-field">
+      <div class="modal-field-lbl" style="margin-top:0;">Tipe Transaksi</div>
+      <select id="tx-type" class="input-field" onchange="onTxTypeChange(this.value)">
         <option value="OUT">Pengeluaran (-)</option>
         <option value="IN">Pemasukan (+)</option>
+        <option value="TRF">Transfer Antar Rekening (⇄)</option>
       </select>
     </div>
     <div class="stat-spacer"></div>
     <div class="split-cell">
+      <div class="modal-field-lbl" style="margin-top:0;">Kategori</div>
       <select id="tx-cat" class="input-field">
         <option value="Makan & Kopi">Makan &amp; Kopi</option>
         <option value="Kebutuhan">Kebutuhan</option>
+        <option value="Tagihan & Cicilan">Tagihan &amp; Cicilan</option>
         <option value="Hardware/IT">Hardware/IT</option>
+        <option value="Investasi">Investasi</option>
         <option value="Gaji/Proyek">Gaji/Proyek</option>
         <option value="Lainnya">Lainnya</option>
       </select>
     </div>
   </div>
 
-  <!-- INPUT NOMINAL DENGAN FORMAT OTOMATIS IDR TITIK & KOMA -->
+  <div class="modal-field-lbl" id="tx-account-lbl" style="margin-top:0;">Sumber Rekening</div>
+  <select id="tx-account" class="input-field"></select>
+
+  <!-- REKENING TUJUAN UNTUK TRANSFER -->
+  <div id="tx-target-account-box" style="display:none; margin-bottom:10px;">
+    <div class="modal-field-lbl" style="margin-top:0;">Rekening Tujuan (Penerima Transfer)</div>
+    <select id="tx-target-account" class="input-field"></select>
+  </div>
+
   <input
     type="text"
     inputmode="decimal"
@@ -55,17 +254,199 @@
   >
 
   <input type="text" id="tx-note" class="input-field" placeholder="Catatan transaksi...">
+
+  <!-- PEMINDAIAN / LAMPIRAN FOTO STRUK -->
+  <label class="file-drop-label" for="tx-receipt-file" id="tx-receipt-label" style="padding:8px 10px; margin-bottom:10px;">
+    📷 Pindai / Lampirkan Foto Struk Belanja (Opsional)
+  </label>
+  <input type="file" id="tx-receipt-file" accept="image/*" style="display:none;" onchange="handleReceiptScan(this)">
+
   <button type="button" class="btn-full-dark" onclick="addTransaction()">+ Simpan Transaksi</button>
 </div>
 
-<div class="clean-card">
+<!-- RIWAYAT TRANSAKSI TERBARU -->
+<div class="clean-card card-history" id="section-tx-history">
   <div class="card-title-row">
-    <span class="ct-left">Riwayat Transaksi</span>
+    <div class="ct-left">
+      <span class="card-badge-icon badge-slate">📜</span>
+      <span class="card-title-text">Riwayat Transaksi</span>
+    </div>
+    <div class="ct-right">
+      <button type="button" class="pill-mini-btn" onclick="exportTransactionsCsv()" style="font-weight:700;">📥 Unduh CSV</button>
+    </div>
   </div>
+
+  <!-- SEARCH & FILTER TOOLBAR -->
+  <div style="margin-bottom:8px;">
+    <input
+      type="text"
+      id="tx-search-input"
+      class="input-field"
+      placeholder="🔍 Cari transaksi / catatan / nominal..."
+      oninput="onTxSearchInput(this.value)"
+      style="margin-bottom:8px; font-size:12px; padding:7px 11px;"
+    >
+    <div class="split-2-table" style="margin-bottom:0;">
+      <div class="split-cell" style="width:48%;">
+        <select id="tx-filter-month" class="input-field" style="margin-bottom:0; font-size:11px; padding:6px 8px; font-weight:700;" onchange="renderTransactionsList()">
+          <option value="ALL">Semua Bulan</option>
+        </select>
+      </div>
+      <div class="stat-spacer"></div>
+      <div class="split-cell" style="width:48%;">
+        <select id="tx-filter-cat" class="input-field" style="margin-bottom:0; font-size:11px; padding:6px 8px; font-weight:700;" onchange="renderTransactionsList()">
+          <option value="ALL">Semua Kategori</option>
+          <option value="Makan & Kopi">Makan &amp; Kopi</option>
+          <option value="Kebutuhan">Kebutuhan</option>
+          <option value="Tagihan & Cicilan">Tagihan &amp; Cicilan</option>
+          <option value="Hardware/IT">Hardware/IT</option>
+          <option value="Investasi">Investasi</option>
+          <option value="Gaji/Proyek">Gaji/Proyek</option>
+          <option value="Transfer Antar Rekening">Transfer Antar Rekening</option>
+          <option value="Lainnya">Lainnya</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="tx-summary-bar" style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:8px; padding:0 2px;"></div>
   <div id="tx-list"></div>
+</div>
+
+<!-- MODAL 1: EDIT JADWAL TAGIHAN -->
+<div class="modal-backdrop" id="edit-bill-modal-backdrop" onclick="closeEditBillModal()"></div>
+<div class="modal-box" id="edit-bill-modal-box" style="top:50%; left:50%; -webkit-transform:translate(-50%, -50%); transform:translate(-50%, -50%); margin:0; max-height:85vh; overflow-y:auto;">
+  <div class="card-title-row">
+    <div class="ct-left">
+      <span class="card-badge-icon badge-emerald">🔔</span>
+      <span class="card-title-text">Edit Jadwal Tagihan</span>
+    </div>
+    <div class="ct-right">
+      <button type="button" class="pill-mini-btn" onclick="closeEditBillModal()">&#10005;</button>
+    </div>
+  </div>
+  <input type="hidden" id="edit-bill-id">
+
+  <div class="modal-field-lbl">Nama Tagihan</div>
+  <input type="text" id="edit-bill-name" class="input-field" placeholder="Nama tagihan...">
+
+  <div class="modal-field-lbl">Nominal &amp; Tanggal Jatuh Tempo</div>
+  <div class="split-2-table">
+    <div class="split-cell" style="width:62%;">
+      <input type="text" inputmode="decimal" id="edit-bill-amount" class="input-field" placeholder="Nominal IDR" oninput="formatIdrLiveInput(this)">
+    </div>
+    <div class="stat-spacer"></div>
+    <div class="split-cell" style="width:36%;">
+      <input type="number" id="edit-bill-due-day" class="input-field" min="1" max="31" placeholder="Tgl (1-31)">
+    </div>
+  </div>
+
+  <div class="modal-field-lbl">Bulan Periode Tagihan</div>
+  <select id="edit-bill-month" class="input-field"></select>
+
+  <div class="modal-field-lbl">Rekening Sumber Pembayaran</div>
+  <select id="edit-bill-account" class="input-field"></select>
+
+  <div style="margin:8px 0 10px 0; background:var(--bg-soft); padding:8px 12px; border-radius:12px; display:table; width:100%; box-sizing:border-box;">
+    <label style="display:table-cell; vertical-align:middle; font-size:12px; font-weight:700; color:var(--text-dark); cursor:pointer;" for="edit-bill-is-recurring">
+      🔁 Ulangi Pengingat Tiap Bulan (Berulang)
+    </label>
+    <div style="display:table-cell; vertical-align:middle; width:44px; text-align:right;">
+      <input type="checkbox" id="edit-bill-is-recurring" style="width:18px; height:18px; cursor:pointer;">
+    </div>
+  </div>
+
+  <button type="button" class="btn-full-dark" onclick="saveEditedBill()">Simpan Perubahan</button>
+  <div id="edit-bill-paid-control" style="margin-top:8px;"></div>
+</div>
+
+<!-- MODAL 2: EDIT REKENING / AKUN ASET -->
+<div class="modal-backdrop" id="edit-acc-modal-backdrop" onclick="closeEditAccountModal()"></div>
+<div class="modal-box" id="edit-acc-modal-box" style="top:50%; left:50%; -webkit-transform:translate(-50%, -50%); transform:translate(-50%, -50%); margin:0; max-height:85vh; overflow-y:auto;">
+  <div class="card-title-row">
+    <div class="ct-left">
+      <span class="card-badge-icon badge-blue">💳</span>
+      <span class="card-title-text">Edit Rekening / Akun</span>
+    </div>
+    <div class="ct-right">
+      <button type="button" class="pill-mini-btn" onclick="closeEditAccountModal()">&#10005;</button>
+    </div>
+  </div>
+  <input type="hidden" id="edit-acc-id">
+
+  <div class="modal-field-lbl">Nama Rekening / Akun</div>
+  <input type="text" id="edit-acc-name" class="input-field" placeholder="Contoh: BCA / GoPay / Bibit">
+
+  <div class="modal-field-lbl">Jenis Akun</div>
+  <select id="edit-acc-type" class="input-field">
+    <option value="Bank">🏦 Rekening Bank</option>
+    <option value="E-Wallet">📱 Dompet Digital</option>
+    <option value="Investasi">📈 Akun Investasi</option>
+    <option value="Tunai">💵 Kas Tunai</option>
+  </select>
+
+  <div class="modal-field-lbl">Saldo Awal (Modal Pertama)</div>
+  <input type="text" inputmode="decimal" id="edit-acc-balance" class="input-field" placeholder="Saldo Awal IDR" oninput="formatIdrLiveInput(this)">
+
+  <button type="button" class="btn-full-dark" onclick="saveEditedAccount()">Simpan Perubahan Rekening</button>
+</div>
+
+<!-- MODAL 3: EDIT CATATAN TRANSAKSI -->
+<div class="modal-backdrop" id="edit-tx-modal-backdrop" onclick="closeEditTxModal()"></div>
+<div class="modal-box" id="edit-tx-modal-box" style="top:50%; left:50%; -webkit-transform:translate(-50%, -50%); transform:translate(-50%, -50%); margin:0; max-height:85vh; overflow-y:auto;">
+  <div class="card-title-row">
+    <div class="ct-left">
+      <span class="card-badge-icon badge-indigo">📝</span>
+      <span class="card-title-text">Edit Catatan Transaksi</span>
+    </div>
+    <div class="ct-right">
+      <button type="button" class="pill-mini-btn" onclick="closeEditTxModal()">&#10005;</button>
+    </div>
+  </div>
+  <input type="hidden" id="edit-tx-id">
+
+  <div class="split-2-table">
+    <div class="split-cell">
+      <div class="modal-field-lbl">Tipe</div>
+      <select id="edit-tx-type" class="input-field" onchange="onEditTxTypeChange(this.value)">
+        <option value="OUT">Pengeluaran (-)</option>
+        <option value="IN">Pemasukan (+)</option>
+        <option value="TRF">Transfer (⇄)</option>
+      </select>
+    </div>
+    <div class="stat-spacer"></div>
+    <div class="split-cell" id="edit-tx-cat-box">
+      <div class="modal-field-lbl">Kategori</div>
+      <select id="edit-tx-cat" class="input-field">
+        <option value="Makan & Kopi">Makan &amp; Kopi</option>
+        <option value="Kebutuhan">Kebutuhan</option>
+        <option value="Tagihan & Cicilan">Tagihan &amp; Cicilan</option>
+        <option value="Hardware/IT">Hardware/IT</option>
+        <option value="Investasi">Investasi</option>
+        <option value="Gaji/Proyek">Gaji/Proyek</option>
+        <option value="Lainnya">Lainnya</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="modal-field-lbl">Sumber Rekening</div>
+  <select id="edit-tx-account" class="input-field"></select>
+
+  <div id="edit-tx-target-box" style="display:none; margin-bottom:8px;">
+    <div class="modal-field-lbl">Ke Rekening Tujuan</div>
+    <select id="edit-tx-target-account" class="input-field"></select>
+  </div>
+
+  <div class="modal-field-lbl">Nominal IDR</div>
+  <input type="text" inputmode="decimal" id="edit-tx-amount" class="input-field" placeholder="IDR 0" oninput="formatIdrLiveInput(this)">
+
+  <div class="modal-field-lbl">Catatan Transaksi</div>
+  <input type="text" id="edit-tx-note" class="input-field" placeholder="Catatan...">
+
+  <button type="button" class="btn-full-dark" onclick="saveEditedTx()">Simpan Perubahan Transaksi</button>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/finance.js') }}?v=14"></script>
+<script src="{{ url_for('static', filename='js/finance.js') }}?v=21"></script>
 {% endblock %}

@@ -12,6 +12,8 @@ _STATIC_MUSIC = os.path.join(BASE_DIR, "static", "music")
 class Config:
     PORT = int(os.getenv("PORT", 5000))
     MONGO_DB_NAME = (os.getenv("MONGO_DB_NAME") or "splash_activity").strip()
+    CLOUDINARY_CLOUD_NAME = (os.getenv("CLOUDINARY_CLOUD_NAME") or "p4yya3go").strip()
+    CLOUDINARY_UPLOAD_PRESET = (os.getenv("CLOUDINARY_UPLOAD_PRESET") or "splash_audio").strip()
     MP3_FOLDER = _STATIC_MUSIC if (os.path.exists(_STATIC_MUSIC) and not os.path.exists(_ROOT_MUSIC)) else _ROOT_MUSIC
     COVERS_FOLDER = os.path.join(BASE_DIR, "static", "covers")
 

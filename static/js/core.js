@@ -1,3 +1,11 @@
+// Bersihkan preferensi tema lama jika ada
+(function() {
+  try {
+    localStorage.removeItem("splash_theme");
+    document.documentElement.removeAttribute("data-theme");
+  } catch(e) {}
+})();
+
 function toggleMenuDrawer(openState) {
   var drawer = document.getElementById("menu-drawer");
   var backdrop = document.getElementById("menu-backdrop");
