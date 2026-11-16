@@ -282,14 +282,48 @@ def api_delete_track(filename):
 # =========================================================
 # 5. REST API KEUANGAN & DIAGNOSTIK
 # =========================================================
+def normalize_tx_category(cat: str) -> str:
+    """Menyelaraskan kategori lama sesuai permintaan pengguna:
+       Makan & Kopi / Makanan & Kopi -> Makanan & Minuman
+       Kopi -> Minuman
+    """
+    c = (cat or "Lainnya").strip()
+    if c in ("Makan & Kopi", "Makanan & Kopi", "Makan & Kopi (Lama)"):
+        return "Makanan & Minuman"
+    if c in ("Kopi", "Coffee"):
+        return "Minuman"
+    return c
+
+
 @app.route("/api/transactions", methods=["GET", "POST"])
 def api_transactions():
     if request.method == "GET":
+        # Migrasi otomatis pada database MongoDB Atlas untuk kategori lama
+        try:
+            db.transactions.update_many(
+                {"category": {"$in": ["Makan & Kopi", "Makanan & Kopi", "Makan & Kopi (Lama)"]}},
+                {"$set": {"category": "Makanan & Minuman"}}
+            )
+            db.transactions.update_many(
+                {"category": {"$in": ["Kopi", "Coffee"]}},
+                {"$set": {"category": "Minuman"}}
+            )
+            db.budgets.update_many(
+                {"category": {"$in": ["Makan & Kopi", "Makanan & Kopi", "Makan & Kopi (Lama)"]}},
+                {"$set": {"category": "Makanan & Minuman"}}
+            )
+            db.budgets.update_many(
+                {"category": {"$in": ["Kopi", "Coffee"]}},
+                {"$set": {"category": "Minuman"}}
+            )
+        except Exception:
+            pass
+
         docs = db.transactions.find().sort("timestamp", DESCENDING)
         items = [{
             "id": str(d["_id"]),
             "type": d.get("type", "OUT"),
-            "category": d.get("category", "Lainnya"),
+            "category": normalize_tx_category(d.get("category")),
             "amount": float(d.get("amount", 0)),
             "note": d.get("note", ""),
             "date": d.get("date", ""),
@@ -307,13 +341,34 @@ def api_transactions():
 
     clean_amount = int(amount) if amount.is_integer() else round(amount, 2)
     tx_type = (data.get("type") or "OUT").strip()
-    category = (data.get("category") or "Lainnya").strip()
+    category = normalize_tx_category(data.get("category"))
     if tx_type == "TRF":
         category = "Transfer Antar Rekening"
 
     account = (data.get("account") or "Rekening Bank").strip()
     target_account = (data.get("target_account") or "").strip()
     default_note = f"Transfer ke {target_account}" if tx_type == "TRF" and target_account else category
+
+    tx_date = (data.get("date") or "").strip()
+    tx_ts = data.get("timestamp")
+    if not tx_date:
+        tx_date = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+    if not tx_ts:
+        parsed_ts = None
+        for fmt in ("%d/%m/%Y %H:%M", "%d/%m/%Y", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+            try:
+                dt = datetime.strptime(tx_date, fmt)
+                parsed_ts = int(dt.timestamp() * 1000)
+                break
+            except ValueError:
+                continue
+        tx_ts = parsed_ts if parsed_ts is not None else int(time.time() * 1000)
+    else:
+        try:
+            tx_ts = int(tx_ts)
+        except (ValueError, TypeError):
+            tx_ts = int(time.time() * 1000)
 
     doc = {
         "type": tx_type,
@@ -323,8 +378,8 @@ def api_transactions():
         "account": account,
         "target_account": target_account,
         "receipt_image": (data.get("receipt_image") or "").strip(),
-        "date": datetime.now().strftime("%d/%m/%Y %H:%M"),
-        "timestamp": int(time.time() * 1000)
+        "date": tx_date,
+        "timestamp": tx_ts
     }
     res = db.transactions.insert_one(doc)
     doc["id"] = str(res.inserted_id)
@@ -352,6 +407,7 @@ def api_tx_detail(tx_id):
                 "amount": float(doc.get("amount", 0)),
                 "note": doc.get("note", ""),
                 "date": doc.get("date", ""),
+                "timestamp": int(doc.get("timestamp", 0)),
                 "account": doc.get("account", "Rekening Bank"),
                 "target_account": doc.get("target_account", ""),
                 "receipt_image": doc.get("receipt_image", "")
@@ -363,7 +419,7 @@ def api_tx_detail(tx_id):
     if "type" in data:
         upd["type"] = str(data["type"]).strip()
     if "category" in data:
-        upd["category"] = str(data["category"]).strip()
+        upd["category"] = normalize_tx_category(data["category"])
     if "amount" in data and float(data["amount"]) > 0:
         amt = float(data["amount"])
         upd["amount"] = int(amt) if amt.is_integer() else round(amt, 2)
@@ -373,6 +429,23 @@ def api_tx_detail(tx_id):
         upd["account"] = str(data["account"]).strip()
     if "target_account" in data:
         upd["target_account"] = str(data["target_account"]).strip()
+    if "date" in data:
+        clean_date = str(data["date"]).strip()
+        if clean_date:
+            upd["date"] = clean_date
+            if "timestamp" not in data or not data["timestamp"]:
+                for fmt in ("%d/%m/%Y %H:%M", "%d/%m/%Y", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+                    try:
+                        dt = datetime.strptime(clean_date, fmt)
+                        upd["timestamp"] = int(dt.timestamp() * 1000)
+                        break
+                    except ValueError:
+                        continue
+    if "timestamp" in data and data["timestamp"]:
+        try:
+            upd["timestamp"] = int(data["timestamp"])
+        except (ValueError, TypeError):
+            pass
 
     if upd:
         db.transactions.update_one({"_id": doc["_id"]}, {"$set": upd})
@@ -516,11 +589,11 @@ def api_account_detail(acc_id):
 def api_budgets():
     if request.method == "GET":
         docs = list(db.budgets.find())
-        items = [{"id": str(d["_id"]), "category": d.get("category", "TOTAL"), "limit": float(d.get("limit", 0))} for d in docs]
+        items = [{"id": str(d["_id"]), "category": normalize_tx_category(d.get("category", "TOTAL")), "limit": float(d.get("limit", 0))} for d in docs]
         return jsonify({"status": "OK", "budgets": items})
 
     data = request.get_json(silent=True) or {}
-    cat = (data.get("category") or "TOTAL").strip()
+    cat = normalize_tx_category(data.get("category") or "TOTAL")
     limit_val = float(data.get("limit") or 0)
     db.budgets.update_one(
         {"category": cat},

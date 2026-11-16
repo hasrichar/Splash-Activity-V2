@@ -12,25 +12,39 @@ var activeMonthFilter = "ALL";
 
 /* Palet Warna Kategori untuk Diagram */
 var CATEGORY_COLORS = {
-  "Makan & Kopi": "#F59E0B",
+  "Makanan": "#EA580C",
+  "Minuman": "#0284C7",
+  "Makanan & Minuman": "#D97706",
+  "Olahraga": "#16A34A",
+  "Game": "#9333EA",
   "Kebutuhan": "#3B82F6",
   "Tagihan & Cicilan": "#EF4444",
   "Hardware/IT": "#8B5CF6",
   "Investasi": "#10B981",
   "Gaji/Proyek": "#14B8A6",
-  "Transfer Antar Rekening": "#3B82F6",
-  "Lainnya": "#64748B"
+  "Transfer Antar Rekening": "#4F46E5",
+  "Lainnya": "#64748B",
+  // Fallbacks kompatibilitas data lama
+  "Kopi": "#0284C7",
+  "Makan & Kopi": "#D97706"
 };
 
 var CATEGORY_ICONS = {
-  "Makan & Kopi": "☕",
+  "Makanan": "🍔",
+  "Minuman": "🥤",
+  "Makanan & Minuman": "🍽️",
+  "Olahraga": "⚽",
+  "Game": "🎮",
   "Kebutuhan": "🛒",
   "Tagihan & Cicilan": "🔔",
   "Hardware/IT": "💻",
   "Investasi": "📈",
   "Gaji/Proyek": "💰",
   "Transfer Antar Rekening": "⇄",
-  "Lainnya": "💳"
+  "Lainnya": "💳",
+  // Fallbacks kompatibilitas data lama
+  "Kopi": "🥤",
+  "Makan & Kopi": "🍽️"
 };
 
 /* 1. Cadangan Keamanan Teks HTML */
@@ -156,6 +170,14 @@ function loadTransactions() {
       try {
         var res = JSON.parse(xhr.responseText);
         transactionsCache = res.transactions || [];
+        for (var i = 0; i < transactionsCache.length; i++) {
+          var c = transactionsCache[i].category || "";
+          if (c === "Makan & Kopi" || c === "Makanan & Kopi" || c === "Makan & Kopi (Lama)") {
+            transactionsCache[i].category = "Makanan & Minuman";
+          } else if (c === "Kopi" || c === "Coffee") {
+            transactionsCache[i].category = "Minuman";
+          }
+        }
         updateMonthFilterDropdown();
         renderFinanceUI();
       } catch (e) {
@@ -193,6 +215,14 @@ function loadBudgets() {
       try {
         var res = JSON.parse(xhr.responseText);
         budgetsCache = res.budgets || [];
+        for (var b = 0; b < budgetsCache.length; b++) {
+          var bc = budgetsCache[b].category || "";
+          if (bc === "Makan & Kopi" || bc === "Makanan & Kopi" || bc === "Makan & Kopi (Lama)") {
+            budgetsCache[b].category = "Makanan & Minuman";
+          } else if (bc === "Kopi" || bc === "Coffee") {
+            budgetsCache[b].category = "Minuman";
+          }
+        }
         renderBudgetsUI();
       } catch (e) {
         console.error("Gagal baca budgets:", e);
@@ -447,18 +477,45 @@ function addTransaction() {
 function openEditTxModal(id) {
   var tx = null;
   for (var i = 0; i < transactionsCache.length; i++) {
-    if (transactionsCache[i].id === id) {
-      tx = transactionsCache[i];
+    var it = transactionsCache[i];
+    var itId = String(it.id || it._id || "");
+    if (itId === String(id)) {
+      tx = it;
       break;
     }
   }
   if (!tx) return;
 
-  document.getElementById("edit-tx-id").value = tx.id;
+  document.getElementById("edit-tx-id").value = tx.id || tx._id || id;
   document.getElementById("edit-tx-type").value = tx.type || "OUT";
   document.getElementById("edit-tx-cat").value = tx.category || "Lainnya";
   document.getElementById("edit-tx-amount").value = formatIdrCurrency(tx.amount || 0, false);
   document.getElementById("edit-tx-note").value = tx.note || "";
+
+  // Set Tanggal & Jam Terjadinya Transaksi
+  var dInfo = parseTxDateInfo(tx.date, tx.timestamp);
+  var dateVal = "";
+  var timeVal = "";
+
+  if (dInfo && dInfo.key && dInfo.key !== "UNKNOWN") {
+    dateVal = dInfo.key;
+  } else {
+    var now = new Date();
+    dateVal = now.getFullYear() + "-" + ("0" + (now.getMonth() + 1)).slice(-2) + "-" + ("0" + now.getDate()).slice(-2);
+  }
+
+  if (dInfo && dInfo.time) {
+    timeVal = dInfo.time.slice(0, 5);
+  } else {
+    var now2 = new Date();
+    timeVal = ("0" + now2.getHours()).slice(-2) + ":" + ("0" + now2.getMinutes()).slice(-2);
+  }
+
+  var dateInput = document.getElementById("edit-tx-date");
+  if (dateInput) dateInput.value = dateVal;
+
+  var timeInput = document.getElementById("edit-tx-time");
+  if (timeInput) timeInput.value = timeVal;
 
   updateAccountSelectOptions();
 
@@ -504,6 +561,11 @@ function saveEditedTx() {
   var acc = document.getElementById("edit-tx-account").value;
   var targetAcc = (type === "TRF") ? document.getElementById("edit-tx-target-account").value : "";
 
+  var dateInput = document.getElementById("edit-tx-date");
+  var timeInput = document.getElementById("edit-tx-time");
+  var rawDate = dateInput ? dateInput.value : "";
+  var rawTime = (timeInput && timeInput.value) ? timeInput.value : "12:00";
+
   if (!id || amt <= 0) {
     alert("Masukkan nominal IDR yang valid.");
     return;
@@ -511,6 +573,30 @@ function saveEditedTx() {
   if (type === "TRF" && acc === targetAcc) {
     alert("Rekening sumber dan rekening tujuan tidak boleh sama.");
     return;
+  }
+
+  var formattedDate = "";
+  var calculatedTs = 0;
+
+  if (rawDate && rawDate.indexOf("-") !== -1) {
+    var parts = rawDate.split("-");
+    if (parts.length === 3) {
+      formattedDate = parts[2] + "/" + parts[1] + "/" + parts[0] + " " + rawTime;
+      var y = parseInt(parts[0], 10);
+      var m = parseInt(parts[1], 10) - 1;
+      var d = parseInt(parts[2], 10);
+      var tParts = rawTime.split(":");
+      var hh = tParts.length > 0 ? parseInt(tParts[0], 10) : 12;
+      var mm = tParts.length > 1 ? parseInt(tParts[1], 10) : 0;
+      var dt = new Date(y, m, d, hh, mm, 0);
+      calculatedTs = dt.getTime();
+    }
+  }
+
+  if (!formattedDate) {
+    var nowD = new Date();
+    formattedDate = ("0" + nowD.getDate()).slice(-2) + "/" + ("0" + (nowD.getMonth() + 1)).slice(-2) + "/" + nowD.getFullYear() + " " + rawTime;
+    calculatedTs = nowD.getTime();
   }
 
   var xhr = new XMLHttpRequest();
@@ -530,7 +616,9 @@ function saveEditedTx() {
     amount: amt,
     note: note,
     account: acc,
-    target_account: targetAcc
+    target_account: targetAcc,
+    date: formattedDate,
+    timestamp: calculatedTs
   }));
 }
 
@@ -826,7 +914,8 @@ function updateAccountSelectOptions() {
     document.getElementById("edit-tx-account"),
     document.getElementById("edit-tx-target-account"),
     document.getElementById("bill-account-select"),
-    document.getElementById("edit-bill-account")
+    document.getElementById("edit-bill-account"),
+    document.getElementById("tx-filter-account")
   ];
 
   var TYPE_ICONS = {
@@ -843,7 +932,12 @@ function updateAccountSelectOptions() {
     var currentVal = sel.value;
     sel.innerHTML = "";
 
-    if (accountsCache.length === 0) {
+    if (sel.id === "tx-filter-account") {
+      var allOpt = document.createElement("option");
+      allOpt.value = "ALL";
+      allOpt.textContent = "Semua Rekening";
+      sel.appendChild(allOpt);
+    } else if (accountsCache.length === 0) {
       sel.innerHTML = '<option value="Rekening Bank">🏦 Rekening Bank</option>';
       continue;
     }
@@ -1342,38 +1436,103 @@ function updateAlertBanner(budgetMaxRatio) {
 /* =========================================================
    FITUR 5: VISUALISASI & ANALISIS DATA (SVG CHARTS)
    ========================================================= */
+var INDO_DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+var INDO_MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+var INDO_MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+
+function formatMonthYearLabel(monthYearKey, count) {
+  if (!monthYearKey || monthYearKey === "ALL") return "Semua Bulan";
+  var parts = monthYearKey.split("/");
+  if (parts.length === 2) {
+    var mIdx = parseInt(parts[0], 10) - 1;
+    var y = parts[1];
+    if (mIdx >= 0 && mIdx < 12) {
+      var monthName = INDO_MONTHS[mIdx] || parts[0];
+      return monthName + " " + y + (typeof count === "number" ? " (" + count + " tx)" : "");
+    }
+  }
+  return monthYearKey + (typeof count === "number" ? " (" + count + " tx)" : "");
+}
+
+function extractMonthYearFromDate(dateStr, ts) {
+  if (dateStr && typeof dateStr === "string") {
+    var datePart = dateStr.trim().split(" ")[0];
+    if (datePart.indexOf("/") !== -1) {
+      var parts = datePart.split("/");
+      if (parts.length === 3) {
+        return ("0" + parseInt(parts[1], 10)).slice(-2) + "/" + parts[2];
+      }
+    } else if (datePart.indexOf("-") !== -1) {
+      var parts2 = datePart.split("-");
+      if (parts2.length === 3) {
+        return ("0" + parseInt(parts2[1], 10)).slice(-2) + "/" + parts2[0];
+      }
+    }
+  }
+  if (ts) {
+    var parsedTs = parseInt(ts, 10);
+    if (!isNaN(parsedTs) && parsedTs > 0) {
+      var d = new Date(parsedTs);
+      return ("0" + (d.getMonth() + 1)).slice(-2) + "/" + d.getFullYear();
+    }
+  }
+  return "";
+}
+
 function updateMonthFilterDropdown() {
   var chartSel = document.getElementById("chart-month-filter");
   var txSel = document.getElementById("tx-filter-month");
 
-  var monthsSet = {};
+  var monthsCountMap = {};
   for (var i = 0; i < transactionsCache.length; i++) {
     var t = transactionsCache[i];
     var m = extractMonthYearFromDate(t.date, t.timestamp);
-    if (m) monthsSet[m] = true;
+    if (m) {
+      if (!monthsCountMap[m]) monthsCountMap[m] = 0;
+      monthsCountMap[m]++;
+    }
   }
 
   var monthList = [];
-  for (var mKey in monthsSet) {
-    if (monthsSet.hasOwnProperty(mKey)) {
-      monthList.push(mKey);
+  for (var mKey in monthsCountMap) {
+    if (monthsCountMap.hasOwnProperty(mKey)) {
+      monthList.push({ key: mKey, count: monthsCountMap[mKey] });
     }
   }
 
-  var selects = [chartSel, txSel];
-  for (var s = 0; s < selects.length; s++) {
-    var sel = selects[s];
-    if (!sel) continue;
-
-    var currentVal = sel.value || "ALL";
-    sel.innerHTML = '<option value="ALL">Semua Bulan</option>';
-    for (var j = 0; j < monthList.length; j++) {
-      var opt = document.createElement("option");
-      opt.value = monthList[j];
-      opt.textContent = "Bulan: " + monthList[j];
-      sel.appendChild(opt);
+  monthList.sort(function(a, b) {
+    var pA = a.key.split("/");
+    var pB = b.key.split("/");
+    if (pA.length === 2 && pB.length === 2) {
+      var scoreA = parseInt(pA[1], 10) * 100 + parseInt(pA[0], 10);
+      var scoreB = parseInt(pB[1], 10) * 100 + parseInt(pB[0], 10);
+      return scoreB - scoreA;
     }
-    sel.value = currentVal;
+    return b.key.localeCompare(a.key);
+  });
+
+  if (chartSel) {
+    var curChartVal = chartSel.value || "ALL";
+    chartSel.innerHTML = '<option value="ALL">Semua Bulan</option>';
+    for (var c = 0; c < monthList.length; c++) {
+      var optC = document.createElement("option");
+      optC.value = monthList[c].key;
+      optC.textContent = formatMonthYearLabel(monthList[c].key, null);
+      chartSel.appendChild(optC);
+    }
+    chartSel.value = curChartVal;
+  }
+
+  if (txSel) {
+    var curTxVal = txSel.value || "ALL";
+    txSel.innerHTML = '<option value="ALL">📅 Semua Bulan (Kapan Saja Transaksi)</option>';
+    for (var j = 0; j < monthList.length; j++) {
+      var optT = document.createElement("option");
+      optT.value = monthList[j].key;
+      optT.textContent = "📅 " + formatMonthYearLabel(monthList[j].key, monthList[j].count);
+      txSel.appendChild(optT);
+    }
+    txSel.value = curTxVal;
   }
 }
 
@@ -1508,8 +1667,59 @@ function formatShortNum(n) {
    RENDER RIWAYAT TRANSAKSI & HERO WALLET
    ========================================================= */
 var txSearchQuery = "";
+var currentTxExactDateFilter = "";
+
 function onTxSearchInput(val) {
   txSearchQuery = (val || "").trim().toLowerCase();
+  currentTxRenderLimit = 20;
+  renderTransactionsList();
+}
+
+function onTxExactDateChange(val) {
+  currentTxExactDateFilter = (val || "").trim();
+  var btnClear = document.getElementById("btn-clear-exact-date");
+  if (btnClear) {
+    btnClear.style.display = currentTxExactDateFilter ? "inline-block" : "none";
+  }
+  if (currentTxExactDateFilter) {
+    setTxPeriodFilterSilent("ALL");
+    var mSel = document.getElementById("tx-filter-month");
+    if (mSel) mSel.value = "ALL";
+  }
+  currentTxRenderLimit = 20;
+  renderTransactionsList();
+}
+
+function clearTxExactDate() {
+  currentTxExactDateFilter = "";
+  var dateInput = document.getElementById("tx-filter-exact-date");
+  if (dateInput) dateInput.value = "";
+  var btnClear = document.getElementById("btn-clear-exact-date");
+  if (btnClear) btnClear.style.display = "none";
+  currentTxRenderLimit = 20;
+  renderTransactionsList();
+}
+
+function clearTxExactDateSilent() {
+  currentTxExactDateFilter = "";
+  var dateInput = document.getElementById("tx-filter-exact-date");
+  if (dateInput) dateInput.value = "";
+  var btnClear = document.getElementById("btn-clear-exact-date");
+  if (btnClear) btnClear.style.display = "none";
+}
+
+function onTxMonthFilterChange() {
+  var mSel = document.getElementById("tx-filter-month");
+  if (mSel && mSel.value !== "ALL") {
+    setTxPeriodFilterSilent("ALL");
+    clearTxExactDateSilent();
+  }
+  currentTxRenderLimit = 20;
+  renderTransactionsList();
+}
+
+function onTxFilterDropdownChange() {
+  currentTxRenderLimit = 20;
   renderTransactionsList();
 }
 
@@ -1559,31 +1769,429 @@ function renderFinanceUI() {
   renderBudgetsUI();
 }
 
+var currentTxTypeFilter = "ALL";
+var currentTxPeriodFilter = "30D";
+var currentTxRenderLimit = 20;
+var collapsedDateGroups = {};
+
+function setTxTypeFilter(type) {
+  currentTxTypeFilter = type || "ALL";
+  currentTxRenderLimit = 20;
+  var chips = ["ALL", "OUT", "IN", "TRF"];
+  for (var i = 0; i < chips.length; i++) {
+    var btn = document.getElementById("chip-type-" + chips[i]);
+    if (btn) {
+      if (chips[i] === currentTxTypeFilter) {
+        btn.className = (chips[i] === "ALL" ? "tx-type-chip active" : "tx-type-chip chip-" + chips[i].toLowerCase() + " active");
+      } else {
+        btn.className = (chips[i] === "ALL" ? "tx-type-chip" : "tx-type-chip chip-" + chips[i].toLowerCase());
+      }
+    }
+  }
+  renderTransactionsList();
+}
+
+function setTxPeriodFilterSilent(period) {
+  currentTxPeriodFilter = period || "ALL";
+  updatePeriodChipsUI();
+}
+
+function updatePeriodChipsUI() {
+  var periods = ["7D", "14D", "30D", "ALL"];
+  for (var i = 0; i < periods.length; i++) {
+    var btn = document.getElementById("chip-period-" + periods[i]);
+    if (btn) {
+      if (periods[i] === currentTxPeriodFilter) {
+        btn.className = "tx-period-chip active";
+      } else {
+        btn.className = "tx-period-chip";
+      }
+    }
+  }
+}
+
+function setTxPeriodFilter(period) {
+  currentTxPeriodFilter = period || "30D";
+  currentTxRenderLimit = 20;
+  clearTxExactDateSilent();
+  if (currentTxPeriodFilter !== "ALL") {
+    var mSel = document.getElementById("tx-filter-month");
+    if (mSel) mSel.value = "ALL";
+  }
+  updatePeriodChipsUI();
+  renderTransactionsList();
+}
+
+function loadMoreTransactions() {
+  currentTxRenderLimit += 20;
+  renderTransactionsList();
+}
+
+function resetTxRenderLimit() {
+  currentTxRenderLimit = 20;
+  renderTransactionsList();
+  var sec = document.getElementById("section-tx-history");
+  if (sec && sec.scrollIntoView) {
+    try {
+      sec.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (e) {
+      sec.scrollIntoView(true);
+    }
+  }
+}
+
+function updateToggleAllArrowButton() {
+  var btn = document.getElementById("btn-toggle-all-groups");
+  var icon = document.getElementById("tx-toggle-arrow-icon");
+  if (!btn && !icon) return;
+
+  var groupEls = document.querySelectorAll(".tx-date-group");
+  if (!groupEls || groupEls.length === 0) {
+    if (icon) icon.innerHTML = "▼";
+    if (btn) {
+      btn.title = "Tampilkan Semua Tanggal";
+      btn.setAttribute("aria-label", "Tampilkan Semua Tanggal");
+    }
+    return;
+  }
+
+  var anyCollapsed = false;
+  for (var i = 0; i < groupEls.length; i++) {
+    if (groupEls[i].className.indexOf("collapsed") !== -1) {
+      anyCollapsed = true;
+      break;
+    }
+  }
+
+  // Jika ada yang terlipat/mengecil -> panah ▼ (mau menampilkan)
+  // Jika semua sudah terbuka/tampil -> panah ▲ (mau mengecilkan)
+  if (anyCollapsed) {
+    if (icon) icon.innerHTML = "▼";
+    if (btn) {
+      btn.title = "Tampilkan Semua Tanggal";
+      btn.setAttribute("aria-label", "Tampilkan Semua Tanggal");
+    }
+  } else {
+    if (icon) icon.innerHTML = "▲";
+    if (btn) {
+      btn.title = "Lipat / Kecilkan Semua Tanggal";
+      btn.setAttribute("aria-label", "Lipat / Kecilkan Semua Tanggal");
+    }
+  }
+}
+
+function toggleAllDateGroups() {
+  var groupEls = document.querySelectorAll(".tx-date-group");
+  var anyCollapsed = false;
+  for (var i = 0; i < groupEls.length; i++) {
+    if (groupEls[i].className.indexOf("collapsed") !== -1) {
+      anyCollapsed = true;
+      break;
+    }
+  }
+  if (anyCollapsed) {
+    expandAllDateGroups();
+  } else {
+    collapseAllDateGroups();
+  }
+  updateToggleAllArrowButton();
+}
+
+function expandAllDateGroups() {
+  for (var k in collapsedDateGroups) {
+    if (collapsedDateGroups.hasOwnProperty(k)) {
+      collapsedDateGroups[k] = false;
+    }
+  }
+  var groupEls = document.querySelectorAll(".tx-date-group");
+  for (var i = 0; i < groupEls.length; i++) {
+    groupEls[i].className = "tx-date-group";
+    var id = groupEls[i].id || "";
+    if (id.indexOf("date-group-") === 0) {
+      var key = id.replace("date-group-", "");
+      collapsedDateGroups[key] = false;
+    }
+  }
+  updateToggleAllArrowButton();
+}
+
+function collapseAllDateGroups() {
+  var groupEls = document.querySelectorAll(".tx-date-group");
+  for (var i = 0; i < groupEls.length; i++) {
+    groupEls[i].className = "tx-date-group collapsed";
+    var id = groupEls[i].id || "";
+    if (id.indexOf("date-group-") === 0) {
+      var key = id.replace("date-group-", "");
+      collapsedDateGroups[key] = true;
+    }
+  }
+  updateToggleAllArrowButton();
+}
+
+function isDateGroupCollapsed(key, groupIndex) {
+  if (typeof collapsedDateGroups[key] === "boolean") {
+    return collapsedDateGroups[key];
+  }
+  // Smart default rule: keep the first 2 groups open, collapse older groups
+  if (typeof groupIndex === "number" && groupIndex < 2) {
+    return false;
+  }
+  var now = new Date();
+  var todayKey = now.getFullYear() + "-" + ("0" + (now.getMonth() + 1)).slice(-2) + "-" + ("0" + now.getDate()).slice(-2);
+  var yest = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  var yestKey = yest.getFullYear() + "-" + ("0" + (yest.getMonth() + 1)).slice(-2) + "-" + ("0" + yest.getDate()).slice(-2);
+  if (key === todayKey || key === yestKey) {
+    return false;
+  }
+  return true;
+}
+
+function toggleDateGroup(key) {
+  var currentState = isDateGroupCollapsed(key);
+  var newState = !currentState;
+  collapsedDateGroups[key] = newState;
+  var grpEl = document.getElementById("date-group-" + key);
+  if (grpEl) {
+    grpEl.className = newState ? "tx-date-group collapsed" : "tx-date-group";
+  }
+  updateToggleAllArrowButton();
+}
+
+function isWithinPeriod(dateObj, period) {
+  if (!period || period === "ALL") return true;
+  if (!dateObj || !(dateObj instanceof Date) || isNaN(dateObj.getTime())) {
+    return true;
+  }
+  var now = new Date();
+  var days = 30;
+  if (period === "7D") days = 7;
+  else if (period === "14D") days = 14;
+  else if (period === "30D") days = 30;
+
+  var cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days, 0, 0, 0, 0);
+  return dateObj.getTime() >= cutoff.getTime();
+}
+
+function getCategoryAvatarConfig(category, type) {
+  if (type === "TRF") {
+    return { icon: "⇄", bgClass: "cat-avatar-trf" };
+  }
+  var cat = category || "Lainnya";
+
+  // Game & Hiburan Gaming
+  if (cat.indexOf("Game") !== -1 || cat.indexOf("Gaming") !== -1) {
+    return { icon: "🎮", bgClass: "cat-avatar-game" };
+  }
+  // Olahraga / Sport / Gym
+  if (cat.indexOf("Olahraga") !== -1 || cat.indexOf("Sport") !== -1 || cat.indexOf("Gym") !== -1 || cat.indexOf("Fitness") !== -1) {
+    return { icon: "⚽", bgClass: "cat-avatar-sports" };
+  }
+  // Makanan & Minuman (data gabungan atau data lama Makan & Kopi)
+  if (cat.indexOf("Makanan & Minuman") !== -1 || (cat.indexOf("Makan") !== -1 && (cat.indexOf("Minum") !== -1 || cat.indexOf("Kopi") !== -1))) {
+    return { icon: "🍽️", bgClass: "cat-avatar-food-drink" };
+  }
+  // Minuman (Minuman, Kopi, Jus, Boba, Cafe)
+  if (cat.indexOf("Minum") !== -1 || cat.indexOf("Drink") !== -1 || cat.indexOf("Kopi") !== -1 || cat.indexOf("Coffee") !== -1 || cat.indexOf("Cafe") !== -1 || cat.indexOf("Kafe") !== -1) {
+    return { icon: "🥤", bgClass: "cat-avatar-drinks" };
+  }
+  // Makanan & Kuliner
+  if (cat.indexOf("Makan") !== -1 || cat.indexOf("Food") !== -1 || cat.indexOf("Kuliner") !== -1 || cat.indexOf("Resto") !== -1) {
+    return { icon: "🍔", bgClass: "cat-avatar-food" };
+  }
+  if (cat.indexOf("Tagihan") !== -1 || cat.indexOf("Cicilan") !== -1 || cat.indexOf("Listrik") !== -1) {
+    return { icon: "⚡", bgClass: "cat-avatar-bills" };
+  }
+  if (cat.indexOf("Gaji") !== -1 || cat.indexOf("Proyek") !== -1) {
+    return { icon: "💰", bgClass: "cat-avatar-income" };
+  }
+  if (cat.indexOf("Kebutuhan") !== -1 || cat.indexOf("Belanja") !== -1) {
+    return { icon: "🛒", bgClass: "cat-avatar-needs" };
+  }
+  if (cat.indexOf("Investasi") !== -1) {
+    return { icon: "📈", bgClass: "cat-avatar-invest" };
+  }
+  if (cat.indexOf("Hardware") !== -1 || cat.indexOf("IT") !== -1) {
+    return { icon: "💻", bgClass: "cat-avatar-tech" };
+  }
+  return { icon: "💳", bgClass: "cat-avatar-other" };
+}
+
+function openDetailTxModal(id) {
+  var tx = null;
+  for (var i = 0; i < transactionsCache.length; i++) {
+    if (transactionsCache[i].id === id) {
+      tx = transactionsCache[i];
+      break;
+    }
+  }
+  if (!tx) return;
+
+  var contentEl = document.getElementById("detail-tx-content");
+  if (!contentEl) return;
+
+  var amt = parseFloat(tx.amount || 0);
+  var isIncome = (tx.type === "IN");
+  var isTransfer = (tx.type === "TRF");
+
+  var signPrefix = isIncome ? "+ " : (isTransfer ? "⇄ " : "- ");
+  var amtClass = isIncome ? "amt-in" : (isTransfer ? "amt-trf" : "amt-out");
+  var avatarCfg = getCategoryAvatarConfig(tx.category, tx.type);
+
+  var typeBadgeText = isIncome ? "Pemasukan" : (isTransfer ? "Transfer Antar Rekening" : "Pengeluaran");
+  var typeBadgeClass = isIncome ? "amt-in" : (isTransfer ? "amt-trf" : "amt-out");
+
+  var dInfo = parseTxDateInfo(tx.date, tx.timestamp);
+  var fullDateStr = "";
+  if (dInfo.dateObj) {
+    fullDateStr = INDO_DAYS[dInfo.dateObj.getDay()] + ", " + dInfo.dateObj.getDate() + " " + INDO_MONTHS_SHORT[dInfo.dateObj.getMonth()] + " " + dInfo.dateObj.getFullYear() + (dInfo.time ? " pukul " + dInfo.time : "");
+  } else {
+    fullDateStr = tx.date || "-";
+  }
+
+  var targetAccRow = "";
+  if (isTransfer && tx.target_account) {
+    targetAccRow =
+      '<div class="detail-info-row">' +
+        '<span class="detail-lbl">Rekening Tujuan</span>' +
+        '<span class="detail-val">➔ ' + safeEscapeHtml(tx.target_account) + '</span>' +
+      '</div>';
+  }
+
+  var receiptBox = "";
+  if (tx.receipt_image) {
+    receiptBox =
+      '<div style="margin-top:12px; background:var(--bg-soft); border:1px solid var(--border-line); border-radius:12px; padding:10px; text-align:center;">' +
+        '<div class="modal-field-lbl" style="text-align:left; margin-top:0;">📷 Foto Struk Belanja</div>' +
+        '<img src="' + tx.receipt_image + '" style="max-width:100%; max-height:220px; border-radius:8px; border:1px solid var(--border-line); cursor:pointer;" onclick="viewReceiptImage(\'' + tx.receipt_image + '\')" alt="Foto Struk" title="Klik untuk memperbesar">' +
+      '</div>';
+  }
+
+  contentEl.innerHTML =
+    '<div style="text-align:center; padding:8px 0 14px 0;">' +
+      '<div class="tx-detail-avatar-big ' + avatarCfg.bgClass + '">' +
+        '<span>' + avatarCfg.icon + '</span>' +
+      '</div>' +
+      '<div class="tx-detail-amt-big ' + amtClass + '">' + signPrefix + formatIdrCurrency(amt, true) + '</div>' +
+      '<div class="tx-detail-title-big">' + safeEscapeHtml(tx.note || "Transaksi") + '</div>' +
+      '<div>' +
+        '<span class="tx-detail-type-badge ' + typeBadgeClass + '">' + typeBadgeText + '</span>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="detail-info-table">' +
+      '<div class="detail-info-row">' +
+        '<span class="detail-lbl">Kategori</span>' +
+        '<span class="detail-val">' + safeEscapeHtml(tx.category) + '</span>' +
+      '</div>' +
+      '<div class="detail-info-row">' +
+        '<span class="detail-lbl">Sumber Rekening</span>' +
+        '<span class="detail-val">' + safeEscapeHtml(tx.account || "Rekening Bank") + '</span>' +
+      '</div>' +
+      targetAccRow +
+      '<div class="detail-info-row">' +
+        '<span class="detail-lbl">Waktu Transaksi</span>' +
+        '<span class="detail-val">' + safeEscapeHtml(fullDateStr) + '</span>' +
+      '</div>' +
+    '</div>' +
+
+    receiptBox +
+
+    '<div style="margin-top:14px;">' +
+      '<div class="split-2-table">' +
+        '<div class="split-cell">' +
+          '<button type="button" class="btn-full-soft" style="margin-bottom:0; font-weight:700;" onclick="editTxFromDetail(\'' + safeEscapeHtml(tx.id) + '\')">✏️ Edit Transaksi</button>' +
+        '</div>' +
+        '<div class="stat-spacer"></div>' +
+        '<div class="split-cell">' +
+          '<button type="button" class="btn-full-soft" style="margin-bottom:0; color:var(--red-err); font-weight:700;" onclick="deleteTxFromDetail(\'' + safeEscapeHtml(tx.id) + '\')">🗑️ Hapus</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  var backdrop = document.getElementById("detail-tx-modal-backdrop");
+  var box = document.getElementById("detail-tx-modal-box");
+  if (backdrop) backdrop.className = "modal-backdrop open";
+  if (box) box.className = "modal-box open";
+}
+
+function closeDetailTxModal() {
+  var backdrop = document.getElementById("detail-tx-modal-backdrop");
+  var box = document.getElementById("detail-tx-modal-box");
+  if (backdrop) backdrop.className = "modal-backdrop";
+  if (box) box.className = "modal-box";
+}
+
+function editTxFromDetail(id) {
+  closeDetailTxModal();
+  openEditTxModal(id);
+}
+
+function deleteTxFromDetail(id) {
+  closeDetailTxModal();
+  deleteTransaction(id);
+}
+
 function renderTransactionsList() {
   var listEl = document.getElementById("tx-list");
   var summaryBar = document.getElementById("tx-summary-bar");
+  var sumInVal = document.getElementById("tx-sum-in-val");
+  var sumOutVal = document.getElementById("tx-sum-out-val");
+  var sumNetVal = document.getElementById("tx-sum-net-val");
+
   var filterCatSel = document.getElementById("tx-filter-cat");
   var filterMonthSel = document.getElementById("tx-filter-month");
+  var filterAccSel = document.getElementById("tx-filter-account");
 
   var filterCat = filterCatSel ? filterCatSel.value : "ALL";
   var filterMonth = filterMonthSel ? filterMonthSel.value : "ALL";
+  var filterAcc = filterAccSel ? filterAccSel.value : "ALL";
 
   if (!listEl) return;
   listEl.innerHTML = "";
 
-  var displayedCount = 0;
+  var matchingItems = [];
+  var totalFilterIn = 0;
+  var totalFilterOut = 0;
 
   for (var i = 0; i < transactionsCache.length; i++) {
     var it = transactionsCache[i];
     var itMonth = extractMonthYearFromDate(it.date, it.timestamp);
+    var dInfo = parseTxDateInfo(it.date, it.timestamp);
 
+    // Filter Tanggal Spesifik (Exact Date: YYYY-MM-DD)
+    if (currentTxExactDateFilter) {
+      if (dInfo.key !== currentTxExactDateFilter) {
+        continue;
+      }
+    } else {
+      // Filter Periode Waktu (7D, 14D, 30D, ALL)
+      if (!isWithinPeriod(dInfo.dateObj, currentTxPeriodFilter)) {
+        continue;
+      }
+
+      // Filter Month
+      if (filterMonth !== "ALL" && itMonth !== filterMonth) {
+        continue;
+      }
+    }
+
+    // Filter Type (ALL / OUT / IN / TRF)
+    if (currentTxTypeFilter !== "ALL" && it.type !== currentTxTypeFilter) {
+      continue;
+    }
+
+    // Filter Category
     if (filterCat !== "ALL" && it.category !== filterCat) {
       continue;
     }
-    if (filterMonth !== "ALL" && itMonth !== filterMonth) {
-      continue;
+
+    // Filter Account
+    if (filterAcc !== "ALL") {
+      var matchAcc = (it.account === filterAcc) || (it.target_account === filterAcc);
+      if (!matchAcc) continue;
     }
 
+    // Filter Search Query
     if (txSearchQuery) {
       var searchable = (
         (it.note || "") + " " +
@@ -1597,75 +2205,383 @@ function renderTransactionsList() {
       }
     }
 
-    displayedCount++;
     var amt = parseFloat(it.amount || 0);
-    var isIncome = (it.type === "IN");
-    var isTransfer = (it.type === "TRF");
-
-    var signPrefix = isIncome ? "+ " : (isTransfer ? "⇄ " : "- ");
-    var amtClass = isIncome ? "amt-in" : (isTransfer ? "amt-trf" : "amt-out");
-    var icon = isTransfer ? "⇄" : (CATEGORY_ICONS[it.category] || "💳");
-
-    var receiptHtml = "";
-    if (it.receipt_image) {
-      receiptHtml = '<img class="tx-receipt-thumb" src="' + it.receipt_image + '" alt="Struk" onclick="viewReceiptImage(\'' + it.receipt_image + '\')" title="Klik untuk lihat struk">';
+    if (it.type === "IN") {
+      totalFilterIn += amt;
+    } else if (it.type === "OUT") {
+      totalFilterOut += amt;
     }
 
-    var subDetail = "";
-    if (isTransfer) {
-      subDetail = 'Transfer: ' + safeEscapeHtml(it.account) + ' ➔ ' + safeEscapeHtml(it.target_account || "Akun Lain") + ' &bull; ' + safeEscapeHtml(it.date);
+    matchingItems.push({
+      tx: it,
+      dInfo: dInfo
+    });
+  }
+
+  // Update Mini Cashflow Summary Card
+  if (sumInVal) sumInVal.textContent = "+ " + formatIdrCurrency(totalFilterIn, true);
+  if (sumOutVal) sumOutVal.textContent = "- " + formatIdrCurrency(totalFilterOut, true);
+  if (sumNetVal) {
+    var netFlow = totalFilterIn - totalFilterOut;
+    if (netFlow > 0) {
+      sumNetVal.textContent = "+ " + formatIdrCurrency(netFlow, true);
+      sumNetVal.style.color = "var(--green-ok)";
+    } else if (netFlow < 0) {
+      sumNetVal.textContent = "- " + formatIdrCurrency(Math.abs(netFlow), true);
+      sumNetVal.style.color = "var(--red-err)";
     } else {
-      subDetail = safeEscapeHtml(it.category) + (it.account ? ' &bull; ' + safeEscapeHtml(it.account) : '') + ' &bull; ' + safeEscapeHtml(it.date);
+      sumNetVal.textContent = "IDR 0";
+      sumNetVal.style.color = "var(--text-muted)";
+    }
+  }
+
+  var totalMatching = matchingItems.length;
+
+  if (totalMatching === 0) {
+    listEl.innerHTML =
+      '<div style="text-align:center; color:var(--text-light); padding:24px 10px; font-size:12px;">' +
+        (txSearchQuery
+          ? 'Tidak ada transaksi yang cocok dengan kata kunci "' + safeEscapeHtml(txSearchQuery) + '".'
+          : (currentTxExactDateFilter
+              ? 'Tidak ada transaksi yang tercatat pada tanggal ' + safeEscapeHtml(currentTxExactDateFilter) + '.'
+              : 'Belum ada catatan transaksi pada filter & rentang waktu ini.')) +
+      '</div>';
+    if (summaryBar) {
+      summaryBar.textContent = "Tidak ada transaksi yang cocok.";
+    }
+    var groupActions = document.getElementById("tx-group-actions");
+    if (groupActions) groupActions.style.display = "none";
+    return;
+  }
+
+  var groupActionsEl = document.getElementById("tx-group-actions");
+  if (groupActionsEl) {
+    groupActionsEl.style.display = "-webkit-flex";
+    groupActionsEl.style.display = "flex";
+  }
+
+  // Progressive Chunking (slice up to currentTxRenderLimit)
+  var itemsToRender = matchingItems.slice(0, currentTxRenderLimit);
+
+  // Group itemsToRender by Date
+  var dateGroups = [];
+  var dateGroupsMap = {};
+
+  for (var k = 0; k < itemsToRender.length; k++) {
+    var itemObj = itemsToRender[k];
+    var groupKey = itemObj.dInfo.key;
+
+    var grp = dateGroupsMap[groupKey];
+    if (!grp) {
+      grp = {
+        key: groupKey,
+        dateObj: itemObj.dInfo.dateObj,
+        items: [],
+        totalIn: 0,
+        totalOut: 0,
+        transferCount: 0
+      };
+      dateGroupsMap[groupKey] = grp;
+      dateGroups.push(grp);
     }
 
-    var row = document.createElement("div");
-    row.className = "tx-row-item";
-    row.innerHTML =
-      '<div class="tx-cell-info" style="display:flex; align-items:center; flex:1; min-width:0; padding-right:8px;">' +
-        receiptHtml +
-        '<div style="overflow:hidden; flex:1; min-width:0;">' +
-          '<div style="font-weight:700; color:var(--text-dark); font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' +
-            icon + ' ' + safeEscapeHtml(it.note) +
+    grp.items.push(itemObj);
+
+    var itemAmt = parseFloat(itemObj.tx.amount || 0);
+    if (itemObj.tx.type === "IN") {
+      grp.totalIn += itemAmt;
+    } else if (itemObj.tx.type === "OUT") {
+      grp.totalOut += itemAmt;
+    } else if (itemObj.tx.type === "TRF") {
+      grp.transferCount++;
+    }
+  }
+
+  // Render per grup tanggal
+  for (var g = 0; g < dateGroups.length; g++) {
+    var group = dateGroups[g];
+    var headerInfo = formatDateGroupHeader(group.key, group.dateObj);
+    var isCollapsed = isDateGroupCollapsed(group.key, g);
+
+    var dailyPillHtml = "";
+    if (group.totalIn > 0 && group.totalOut === 0) {
+      dailyPillHtml = '<span class="tx-date-amt amt-in">+ ' + formatIdrCurrency(group.totalIn, true) + '</span>';
+    } else if (group.totalOut > 0 && group.totalIn === 0) {
+      dailyPillHtml = '<span class="tx-date-amt amt-out">- ' + formatIdrCurrency(group.totalOut, true) + '</span>';
+    } else if (group.totalIn > 0 && group.totalOut > 0) {
+      var net = group.totalIn - group.totalOut;
+      if (net > 0) {
+        dailyPillHtml = '<span class="tx-date-amt amt-in">Net + ' + formatIdrCurrency(net, true) + '</span>';
+      } else if (net < 0) {
+        dailyPillHtml = '<span class="tx-date-amt amt-out">Net - ' + formatIdrCurrency(Math.abs(net), true) + '</span>';
+      } else {
+        dailyPillHtml = '<span class="tx-date-amt amt-neutral">Net IDR 0</span>';
+      }
+    } else if (group.transferCount > 0) {
+      dailyPillHtml = '<span class="tx-date-amt amt-trf">' + group.transferCount + ' Transfer</span>';
+    } else {
+      dailyPillHtml = '<span class="tx-date-amt amt-neutral">' + group.items.length + ' Transaksi</span>';
+    }
+
+    var groupEl = document.createElement("div");
+    groupEl.id = "date-group-" + group.key;
+    groupEl.className = isCollapsed ? "tx-date-group collapsed" : "tx-date-group";
+
+    var headerEl = document.createElement("div");
+    headerEl.className = "tx-date-header";
+    headerEl.setAttribute("onclick", "toggleDateGroup('" + group.key + "')");
+    headerEl.setAttribute("role", "button");
+    headerEl.setAttribute("tabindex", "0");
+    headerEl.innerHTML =
+      '<div class="tx-date-left">' +
+        '<span class="tx-date-badge ' + headerInfo.badgeClass + '">' + headerInfo.badgeText + '</span>' +
+        '<span class="tx-date-text">' + safeEscapeHtml(headerInfo.titleText) + '</span>' +
+        '<span class="tx-date-count">(' + group.items.length + ')</span>' +
+      '</div>' +
+      '<div class="tx-date-right">' +
+        dailyPillHtml +
+        '<span class="tx-date-chevron">▼</span>' +
+      '</div>';
+    groupEl.appendChild(headerEl);
+
+    var itemsWrap = document.createElement("div");
+    itemsWrap.className = "tx-date-items";
+
+    for (var j = 0; j < group.items.length; j++) {
+      var itemObj = group.items[j];
+      var it = itemObj.tx;
+      var dInfo = itemObj.dInfo;
+
+      var amt = parseFloat(it.amount || 0);
+      var isIncome = (it.type === "IN");
+      var isTransfer = (it.type === "TRF");
+
+      var signPrefix = isIncome ? "+ " : (isTransfer ? "⇄ " : "- ");
+      var amtClass = isIncome ? "amt-in" : (isTransfer ? "amt-trf" : "amt-out");
+
+      var avatarCfg = getCategoryAvatarConfig(it.category, it.type);
+
+      var receiptIndicator = "";
+      if (it.receipt_image) {
+        receiptIndicator = '<span class="tx-receipt-indicator" title="Ada Foto Struk">📷 Struk</span>';
+      }
+
+      var metaParts = [];
+      if (isTransfer) {
+        metaParts.push('Transfer: ' + safeEscapeHtml(it.account) + ' ➔ ' + safeEscapeHtml(it.target_account || "Akun Lain"));
+      } else {
+        metaParts.push(safeEscapeHtml(it.category));
+        if (it.account) {
+          metaParts.push(safeEscapeHtml(it.account));
+        }
+      }
+
+      if (dInfo.time) {
+        metaParts.push('⏱️ ' + safeEscapeHtml(dInfo.time));
+      } else if (dInfo.key === "UNKNOWN" && it.date) {
+        metaParts.push(safeEscapeHtml(it.date));
+      }
+
+      var subDetail = metaParts.join(' &bull; ');
+
+      var row = document.createElement("div");
+      row.className = "tx-row-item";
+      row.setAttribute("onclick", "openDetailTxModal('" + safeEscapeHtml(it.id) + "')");
+      row.setAttribute("role", "button");
+      row.setAttribute("tabindex", "0");
+      row.innerHTML =
+        '<div class="tx-avatar-wrap ' + avatarCfg.bgClass + '">' +
+          '<span>' + avatarCfg.icon + '</span>' +
+        '</div>' +
+        '<div class="tx-info-wrap">' +
+          '<div class="tx-title-row">' +
+            '<span class="tx-note-text">' + safeEscapeHtml(it.note || "Transaksi") + '</span>' +
+            receiptIndicator +
           '</div>' +
-          '<div style="font-size:11px; color:var(--text-muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' +
+          '<div class="tx-meta-row">' +
             subDetail +
           '</div>' +
         '</div>' +
-      '</div>' +
-      '<div class="tx-cell-amt" style="text-align:right; flex-shrink:0;">' +
-        '<div class="' + amtClass + '" style="font-size:12.5px; font-weight:800;">' + signPrefix + formatIdrCurrency(amt, true) + '</div>' +
-        '<div style="margin-top:5px; white-space:nowrap;">' +
-          '<button type="button" class="pill-mini-btn" style="padding:3px 8px; font-size:10px; margin-left:3px;" onclick="openEditTxModal(\'' + safeEscapeHtml(it.id) + '\')">Edit</button>' +
-          '<button type="button" class="pill-mini-btn btn-mini-danger" style="padding:3px 8px; font-size:10px; margin-left:3px;" onclick="deleteTransaction(\'' + safeEscapeHtml(it.id) + '\')">✕</button>' +
-        '</div>' +
-      '</div>';
-    listEl.appendChild(row);
-  }
-
-  if (summaryBar) {
-    if (displayedCount === 0) {
-      summaryBar.textContent = "Tidak ada transaksi yang cocok.";
-    } else {
-      summaryBar.innerHTML =
-        'Menampilkan <strong>' + displayedCount + ' transaksi</strong>' +
-        (filterMonth !== "ALL" ? ' &bull; Periode: ' + filterMonth : '') +
-        (txSearchQuery ? ' &bull; Pencarian: "' + safeEscapeHtml(txSearchQuery) + '"' : '');
+        '<div class="tx-amt-wrap">' +
+          '<div class="' + amtClass + ' tx-amt-num">' + signPrefix + formatIdrCurrency(amt, true) + '</div>' +
+          '<span class="tx-chevron">›</span>' +
+        '</div>';
+      itemsWrap.appendChild(row);
     }
+
+    groupEl.appendChild(itemsWrap);
+    listEl.appendChild(groupEl);
   }
 
-  if (displayedCount === 0) {
-    listEl.innerHTML =
-      '<div style="text-align:center; color:var(--text-light); padding:16px 10px; font-size:12px;">' +
-        (txSearchQuery
-          ? 'Tidak ada transaksi yang cocok dengan kata kunci "' + safeEscapeHtml(txSearchQuery) + '".'
-          : 'Belum ada catatan transaksi pada filter ini.') +
-      '</div>';
+  // Load More Button / All Loaded Indicator
+  if (totalMatching > currentTxRenderLimit) {
+    var remaining = totalMatching - currentTxRenderLimit;
+    var batchSize = remaining < 20 ? remaining : 20;
+    var loadMoreDiv = document.createElement("div");
+    loadMoreDiv.className = "tx-load-more-card";
+    loadMoreDiv.innerHTML =
+      '<button type="button" class="btn-load-more" onclick="loadMoreTransactions()">' +
+        '<span class="load-more-icon">▾</span> Tampilkan ' + batchSize + ' Transaksi Berikutnya ' +
+        '<span class="load-more-badge">Sisa ' + remaining + '</span>' +
+      '</button>' +
+      '<div class="tx-load-progress-txt">Menampilkan ' + itemsToRender.length + ' dari ' + totalMatching + ' transaksi</div>';
+    listEl.appendChild(loadMoreDiv);
+  } else if (totalMatching > 20 && itemsToRender.length === totalMatching) {
+    var allLoadedDiv = document.createElement("div");
+    allLoadedDiv.className = "tx-load-more-card tx-all-loaded";
+    allLoadedDiv.innerHTML =
+      '<div class="tx-all-loaded-txt">✓ Seluruh ' + totalMatching + ' transaksi telah ditampilkan</div>' +
+      '<button type="button" class="tx-reset-limit-btn" onclick="resetTxRenderLimit()">Sembunyikan ke 20 awal ▴</button>';
+    listEl.appendChild(allLoadedDiv);
   }
+
+  // Summary Bar Info
+  if (summaryBar) {
+    var filterNotes = [];
+    if (currentTxExactDateFilter) {
+      var dExact = parseTxDateInfo(currentTxExactDateFilter, null);
+      var exactDateStr = dExact.dateObj
+        ? INDO_DAYS[dExact.dateObj.getDay()] + ", " + dExact.dateObj.getDate() + " " + INDO_MONTHS_SHORT[dExact.dateObj.getMonth()] + " " + dExact.dateObj.getFullYear()
+        : currentTxExactDateFilter;
+      filterNotes.push("Tanggal: " + exactDateStr);
+    } else {
+      if (filterMonth !== "ALL") {
+        filterNotes.push(formatMonthYearLabel(filterMonth, null));
+      } else if (currentTxPeriodFilter !== "ALL") {
+        filterNotes.push(currentTxPeriodFilter === "7D" ? "7 Hari" : (currentTxPeriodFilter === "14D" ? "14 Hari" : "30 Hari"));
+      }
+    }
+    if (currentTxTypeFilter !== "ALL") {
+      filterNotes.push(currentTxTypeFilter === "OUT" ? "Pengeluaran" : (currentTxTypeFilter === "IN" ? "Pemasukan" : "Transfer"));
+    }
+    if (filterAcc !== "ALL") {
+      filterNotes.push(filterAcc);
+    }
+    if (filterCat !== "ALL") {
+      filterNotes.push(filterCat);
+    }
+    if (txSearchQuery) {
+      filterNotes.push('"' + safeEscapeHtml(txSearchQuery) + '"');
+    }
+
+    var countHtml = "";
+    if (itemsToRender.length < totalMatching) {
+      countHtml = "Menampilkan <strong>" + itemsToRender.length + "</strong> dari <strong>" + totalMatching + " transaksi</strong>";
+    } else {
+      countHtml = "Menampilkan <strong>" + totalMatching + " transaksi</strong>";
+    }
+
+    summaryBar.innerHTML =
+      countHtml + (filterNotes.length > 0 ? ' &bull; Filter: ' + filterNotes.join(", ") : '');
+  }
+
+  // Update dynamic single arrow button (▼ menampilkan vs ▲ mengecilkan)
+  updateToggleAllArrowButton();
 }
 
 /* =========================================================
    HELPER BULAN & TANGGAL
    ========================================================= */
+function parseTxDateInfo(dateStr, ts) {
+  var dateKey = "";
+  var timeStr = "";
+  var dateObj = null;
+
+  if (ts) {
+    var parsedTs = parseInt(ts, 10);
+    if (!isNaN(parsedTs) && parsedTs > 0) {
+      dateObj = new Date(parsedTs);
+    }
+  }
+
+  if (dateStr && typeof dateStr === "string") {
+    var parts = dateStr.trim().split(" ");
+    var datePart = parts[0];
+    if (parts.length > 1 && parts[1]) {
+      timeStr = parts[1];
+    }
+
+    if (datePart.indexOf("/") !== -1) {
+      var dmy = datePart.split("/");
+      if (dmy.length === 3) {
+        var d = parseInt(dmy[0], 10);
+        var m = parseInt(dmy[1], 10) - 1;
+        var y = parseInt(dmy[2], 10);
+        if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+          if (!dateObj) {
+            dateObj = new Date(y, m, d);
+          }
+          dateKey = ("0000" + y).slice(-4) + "-" + ("0" + (m + 1)).slice(-2) + "-" + ("0" + d).slice(-2);
+        }
+      }
+    } else if (datePart.indexOf("-") !== -1) {
+      var ymd = datePart.split("-");
+      if (ymd.length === 3) {
+        var y2 = parseInt(ymd[0], 10);
+        var m2 = parseInt(ymd[1], 10) - 1;
+        var d2 = parseInt(ymd[2], 10);
+        if (!isNaN(d2) && !isNaN(m2) && !isNaN(y2)) {
+          if (!dateObj) {
+            dateObj = new Date(y2, m2, d2);
+          }
+          dateKey = ("0000" + y2).slice(-4) + "-" + ("0" + (m2 + 1)).slice(-2) + "-" + ("0" + d2).slice(-2);
+        }
+      }
+    }
+  }
+
+  if (!dateKey && dateObj) {
+    dateKey = dateObj.getFullYear() + "-" + ("0" + (dateObj.getMonth() + 1)).slice(-2) + "-" + ("0" + dateObj.getDate()).slice(-2);
+    if (!timeStr) {
+      timeStr = ("0" + dateObj.getHours()).slice(-2) + ":" + ("0" + dateObj.getMinutes()).slice(-2);
+    }
+  }
+
+  if (!dateKey) {
+    dateKey = "UNKNOWN";
+  }
+
+  return {
+    key: dateKey,
+    time: timeStr,
+    dateObj: dateObj
+  };
+}
+
+function formatDateGroupHeader(key, dateObj) {
+  var now = new Date();
+  var todayKey = now.getFullYear() + "-" + ("0" + (now.getMonth() + 1)).slice(-2) + "-" + ("0" + now.getDate()).slice(-2);
+  var yest = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  var yestKey = yest.getFullYear() + "-" + ("0" + (yest.getMonth() + 1)).slice(-2) + "-" + ("0" + yest.getDate()).slice(-2);
+
+  var badgeText = "";
+  var badgeClass = "";
+  var titleText = "";
+
+  if (key === todayKey) {
+    badgeText = "Hari Ini";
+    badgeClass = "badge-today";
+    titleText = (dateObj ? INDO_DAYS[dateObj.getDay()] + ", " + dateObj.getDate() + " " + INDO_MONTHS_SHORT[dateObj.getMonth()] + " " + dateObj.getFullYear() : "Hari Ini");
+  } else if (key === yestKey) {
+    badgeText = "Kemarin";
+    badgeClass = "badge-yesterday";
+    titleText = (dateObj ? INDO_DAYS[dateObj.getDay()] + ", " + dateObj.getDate() + " " + INDO_MONTHS_SHORT[dateObj.getMonth()] + " " + dateObj.getFullYear() : "Kemarin");
+  } else if (dateObj) {
+    badgeText = INDO_DAYS[dateObj.getDay()];
+    badgeClass = "badge-day";
+    titleText = dateObj.getDate() + " " + INDO_MONTHS_SHORT[dateObj.getMonth()] + " " + dateObj.getFullYear();
+  } else {
+    badgeText = "Lainnya";
+    badgeClass = "badge-day";
+    titleText = key;
+  }
+
+  return {
+    badgeText: badgeText,
+    badgeClass: badgeClass,
+    titleText: titleText
+  };
+}
 function getCurrentMonthPrefix() {
   var d = new Date();
   var m = ("0" + (d.getMonth() + 1)).slice(-2);
@@ -1678,20 +2594,6 @@ function isTimestampThisMonth(ts) {
   var d = new Date(parseInt(ts, 10));
   var now = new Date();
   return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-}
-
-function extractMonthYearFromDate(dateStr, ts) {
-  if (dateStr) {
-    var parts = dateStr.split(" ")[0].split("/");
-    if (parts.length === 3) {
-      return parts[1] + "/" + parts[2];
-    }
-  }
-  if (ts) {
-    var d = new Date(parseInt(ts, 10));
-    return ("0" + (d.getMonth() + 1)).slice(-2) + "/" + d.getFullYear();
-  }
-  return "";
 }
 
 /* =========================================================

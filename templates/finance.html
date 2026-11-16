@@ -119,7 +119,11 @@
     <div class="split-cell" style="width:45%;">
       <select id="budget-cat-select" class="input-field">
         <option value="TOTAL">Semua Kategori (Total)</option>
-        <option value="Makan & Kopi">Makan &amp; Kopi</option>
+        <option value="Makanan">Makanan</option>
+        <option value="Minuman">Minuman</option>
+        <option value="Makanan & Minuman">Makanan &amp; Minuman</option>
+        <option value="Olahraga">Olahraga</option>
+        <option value="Game">Game</option>
         <option value="Kebutuhan">Kebutuhan</option>
         <option value="Hardware/IT">Hardware/IT</option>
         <option value="Tagihan & Cicilan">Tagihan &amp; Cicilan</option>
@@ -204,10 +208,14 @@
 
   <!-- TEMPLATE OTOMATIS 1-KLIK -->
   <div class="quick-chips-row">
-    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Makan & Kopi','25000','Kopi & Snack')">☕ Kopi 25rb</button>
-    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Tagihan & Cicilan','150000','Langganan Bulanan')">🎵 Langganan</button>
-    <button type="button" class="chip-btn" onclick="fillQuickTx('IN','Gaji/Proyek','5000000','Pemasukan Gaji/Proyek')">💰 Gaji/Proyek</button>
-    <button type="button" class="chip-btn" onclick="fillQuickTx('TRF','Transfer Antar Rekening','100000','Pindah Dana')">⇄ Pindah Dana</button>
+    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Minuman','15000','Minuman')">🥤 Minuman 15rb</button>
+    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Makanan','35000','Makan Siang')">🍔 Makan 35rb</button>
+    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Makanan & Minuman','50000','Makan & Minum')">🍽️ Makan &amp; Minum</button>
+    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Game','50000','Voucher Game')">🎮 Game 50rb</button>
+    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Olahraga','30000','Olahraga / Gym')">⚽ Olahraga</button>
+    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Tagihan & Cicilan','150000','Langganan')">⚡ Tagihan</button>
+    <button type="button" class="chip-btn" onclick="fillQuickTx('IN','Gaji/Proyek','5000000','Pemasukan Gaji')">💰 Gaji</button>
+    <button type="button" class="chip-btn" onclick="fillQuickTx('TRF','Transfer Antar Rekening','100000','Pindah Dana')">⇄ Transfer</button>
   </div>
 
   <div class="split-2-table">
@@ -223,7 +231,11 @@
     <div class="split-cell">
       <div class="modal-field-lbl" style="margin-top:0;">Kategori</div>
       <select id="tx-cat" class="input-field">
-        <option value="Makan & Kopi">Makan &amp; Kopi</option>
+        <option value="Makanan">Makanan</option>
+        <option value="Minuman">Minuman</option>
+        <option value="Makanan & Minuman">Makanan &amp; Minuman</option>
+        <option value="Olahraga">Olahraga</option>
+        <option value="Game">Game</option>
         <option value="Kebutuhan">Kebutuhan</option>
         <option value="Tagihan & Cicilan">Tagihan &amp; Cicilan</option>
         <option value="Hardware/IT">Hardware/IT</option>
@@ -278,38 +290,102 @@
 
   <!-- SEARCH & FILTER TOOLBAR -->
   <div style="margin-bottom:8px;">
+    <!-- QUICK TYPE FILTER CHIPS -->
+    <div class="tx-type-chips-row">
+      <button type="button" class="tx-type-chip active" id="chip-type-ALL" onclick="setTxTypeFilter('ALL')">Semua</button>
+      <button type="button" class="tx-type-chip chip-out" id="chip-type-OUT" onclick="setTxTypeFilter('OUT')">🔴 Pengeluaran</button>
+      <button type="button" class="tx-type-chip chip-in" id="chip-type-IN" onclick="setTxTypeFilter('IN')">🟢 Pemasukan</button>
+      <button type="button" class="tx-type-chip chip-trf" id="chip-type-TRF" onclick="setTxTypeFilter('TRF')">⇄ Transfer</button>
+    </div>
+
+    <!-- QUICK PERIOD FILTER CHIPS -->
+    <div class="tx-period-chips-row">
+      <span class="tx-period-lbl">Rentang:</span>
+      <button type="button" class="tx-period-chip active" id="chip-period-30D" onclick="setTxPeriodFilter('30D')">30 Hari</button>
+      <button type="button" class="tx-period-chip" id="chip-period-7D" onclick="setTxPeriodFilter('7D')">7 Hari</button>
+      <button type="button" class="tx-period-chip" id="chip-period-14D" onclick="setTxPeriodFilter('14D')">14 Hari</button>
+      <button type="button" class="tx-period-chip" id="chip-period-ALL" onclick="setTxPeriodFilter('ALL')">Semua Waktu</button>
+    </div>
+
     <input
       type="text"
       id="tx-search-input"
       class="input-field"
       placeholder="🔍 Cari transaksi / catatan / nominal..."
       oninput="onTxSearchInput(this.value)"
-      style="margin-bottom:8px; font-size:12px; padding:7px 11px;"
+      style="margin-bottom:6px; font-size:12px; padding:7px 11px;"
     >
-    <div class="split-2-table" style="margin-bottom:0;">
+
+    <!-- FILTER BULAN TRANSAKSI (KAPAN SAJA BERLANGSUNG) -->
+    <select id="tx-filter-month" class="input-field" style="margin-bottom:6px; font-size:11.5px; padding:7px 9px; font-weight:700;" onchange="onTxMonthFilterChange()">
+      <option value="ALL">📅 Semua Bulan (Kapan Saja Transaksi)</option>
+    </select>
+
+    <div class="split-2-table" style="margin-bottom:6px;">
       <div class="split-cell" style="width:48%;">
-        <select id="tx-filter-month" class="input-field" style="margin-bottom:0; font-size:11px; padding:6px 8px; font-weight:700;" onchange="renderTransactionsList()">
-          <option value="ALL">Semua Bulan</option>
-        </select>
+        <div class="tx-date-input-wrap">
+          <input
+            type="date"
+            id="tx-filter-exact-date"
+            class="input-field"
+            title="Pilih tanggal spesifik transaksi"
+            style="margin-bottom:0; font-size:11px; padding:6px 6px; font-weight:700;"
+            onchange="onTxExactDateChange(this.value)"
+          >
+          <button type="button" id="btn-clear-exact-date" class="btn-clear-date-mini" onclick="clearTxExactDate()" title="Hapus Filter Tanggal" style="display:none;">✕</button>
+        </div>
       </div>
       <div class="stat-spacer"></div>
       <div class="split-cell" style="width:48%;">
-        <select id="tx-filter-cat" class="input-field" style="margin-bottom:0; font-size:11px; padding:6px 8px; font-weight:700;" onchange="renderTransactionsList()">
-          <option value="ALL">Semua Kategori</option>
-          <option value="Makan & Kopi">Makan &amp; Kopi</option>
-          <option value="Kebutuhan">Kebutuhan</option>
-          <option value="Tagihan & Cicilan">Tagihan &amp; Cicilan</option>
-          <option value="Hardware/IT">Hardware/IT</option>
-          <option value="Investasi">Investasi</option>
-          <option value="Gaji/Proyek">Gaji/Proyek</option>
-          <option value="Transfer Antar Rekening">Transfer Antar Rekening</option>
-          <option value="Lainnya">Lainnya</option>
+        <select id="tx-filter-account" class="input-field" style="margin-bottom:0; font-size:11px; padding:6px 8px; font-weight:700;" onchange="onTxFilterDropdownChange()">
+          <option value="ALL">Semua Rekening</option>
         </select>
       </div>
     </div>
+
+    <select id="tx-filter-cat" class="input-field" style="margin-bottom:8px; font-size:11px; padding:6px 8px; font-weight:700;" onchange="onTxFilterDropdownChange()">
+      <option value="ALL">Semua Kategori</option>
+      <option value="Makanan">Makanan</option>
+      <option value="Minuman">Minuman</option>
+      <option value="Makanan & Minuman">Makanan &amp; Minuman</option>
+      <option value="Olahraga">Olahraga</option>
+      <option value="Game">Game</option>
+      <option value="Kebutuhan">Kebutuhan</option>
+      <option value="Tagihan & Cicilan">Tagihan &amp; Cicilan</option>
+      <option value="Hardware/IT">Hardware/IT</option>
+      <option value="Investasi">Investasi</option>
+      <option value="Gaji/Proyek">Gaji/Proyek</option>
+      <option value="Transfer Antar Rekening">Transfer Antar Rekening</option>
+      <option value="Lainnya">Lainnya</option>
+    </select>
   </div>
 
-  <div id="tx-summary-bar" style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:8px; padding:0 2px;"></div>
+  <!-- MINI CASH FLOW SUMMARY CARD -->
+  <div id="tx-summary-card" class="tx-summary-mini-card">
+    <div class="tx-sum-cell tx-sum-in">
+      <div class="tx-sum-lbl">Pemasukan</div>
+      <div class="tx-sum-val" id="tx-sum-in-val">+IDR 0</div>
+    </div>
+    <div class="tx-sum-cell tx-sum-out">
+      <div class="tx-sum-lbl">Pengeluaran</div>
+      <div class="tx-sum-val" id="tx-sum-out-val">-IDR 0</div>
+    </div>
+    <div class="tx-sum-cell tx-sum-net">
+      <div class="tx-sum-lbl">Net Arus Kas</div>
+      <div class="tx-sum-val" id="tx-sum-net-val">IDR 0</div>
+    </div>
+  </div>
+
+  <!-- SUMMARY BAR & TOGGLE ARROW BUTTON (SATU TEMPAT BERGANTI-GANTI) -->
+  <div class="tx-bar-split">
+    <div id="tx-summary-bar" class="tx-filter-info-bar">Menampilkan 0 transaksi</div>
+    <div class="tx-bar-actions" id="tx-group-actions">
+      <button type="button" class="tx-toggle-arrow-btn" id="btn-toggle-all-groups" onclick="toggleAllDateGroups()" title="Tampilkan Semua Tanggal">
+        <span id="tx-toggle-arrow-icon">▼</span>
+      </button>
+    </div>
+  </div>
+
   <div id="tx-list"></div>
 </div>
 
@@ -405,6 +481,19 @@
   </div>
   <input type="hidden" id="edit-tx-id">
 
+  <!-- TANGGAL & WAKTU TERJADINYA TRANSAKSI -->
+  <div class="split-2-table" style="margin-bottom:8px;">
+    <div class="split-cell" style="width:58%;">
+      <div class="modal-field-lbl" style="margin-top:0;">Tanggal Terjadinya</div>
+      <input type="date" id="edit-tx-date" class="input-field" style="margin-bottom:0; font-weight:700; font-size:12px;">
+    </div>
+    <div class="stat-spacer"></div>
+    <div class="split-cell" style="width:38%;">
+      <div class="modal-field-lbl" style="margin-top:0;">Jam</div>
+      <input type="time" id="edit-tx-time" class="input-field" style="margin-bottom:0; font-weight:700; font-size:12px;">
+    </div>
+  </div>
+
   <div class="split-2-table">
     <div class="split-cell">
       <div class="modal-field-lbl">Tipe</div>
@@ -418,7 +507,11 @@
     <div class="split-cell" id="edit-tx-cat-box">
       <div class="modal-field-lbl">Kategori</div>
       <select id="edit-tx-cat" class="input-field">
-        <option value="Makan & Kopi">Makan &amp; Kopi</option>
+        <option value="Makanan">Makanan</option>
+        <option value="Minuman">Minuman</option>
+        <option value="Makanan & Minuman">Makanan &amp; Minuman</option>
+        <option value="Olahraga">Olahraga</option>
+        <option value="Game">Game</option>
         <option value="Kebutuhan">Kebutuhan</option>
         <option value="Tagihan & Cicilan">Tagihan &amp; Cicilan</option>
         <option value="Hardware/IT">Hardware/IT</option>
@@ -445,8 +538,24 @@
 
   <button type="button" class="btn-full-dark" onclick="saveEditedTx()">Simpan Perubahan Transaksi</button>
 </div>
+
+<!-- MODAL 4: DETAIL TRANSAKSI (TAP TO INSPECT) -->
+<div class="modal-backdrop" id="detail-tx-modal-backdrop" onclick="closeDetailTxModal()"></div>
+<div class="modal-box" id="detail-tx-modal-box" style="top:50%; left:50%; -webkit-transform:translate(-50%, -50%); transform:translate(-50%, -50%); margin:0; max-height:88vh; overflow-y:auto;">
+  <div class="card-title-row">
+    <div class="ct-left">
+      <span class="card-badge-icon badge-slate">📜</span>
+      <span class="card-title-text">Detail Transaksi</span>
+    </div>
+    <div class="ct-right">
+      <button type="button" class="pill-mini-btn" onclick="closeDetailTxModal()">&#10005;</button>
+    </div>
+  </div>
+
+  <div id="detail-tx-content"></div>
+</div>
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/finance.js') }}?v=21"></script>
+<script src="{{ url_for('static', filename='js/finance.js') }}?v=28"></script>
 {% endblock %}
