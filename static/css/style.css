@@ -1751,7 +1751,7 @@ svg.svg-ic {
 }
 
 /* =========================================================
-   6. MODAL PENGATURAN ALBUM & GAMBAR LAGU
+   6. MODAL PENGATURAN ALBUM & TRANSAKSI
    ========================================================= */
 .modal-backdrop {
   position: fixed;
@@ -1759,8 +1759,10 @@ svg.svg-ic {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(20, 23, 31, 0.45);
-  z-index: 210;
+  background: rgba(15, 23, 42, 0.52);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  z-index: 220;
   display: none;
 }
 
@@ -1772,19 +1774,38 @@ svg.svg-ic {
   position: fixed;
   top: 50%;
   left: 50%;
-  width: 300px;
-  margin-left: -150px;
-  margin-top: -195px;
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+  width: 93%;
+  max-width: 312px;
+  max-height: 88vh;
+  margin: 0;
   background: var(--bg-card);
-  border-radius: 22px;
-  padding: 16px 15px;
-  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.28);
-  z-index: 220;
+  border-radius: 20px;
+  padding: 16px 14px;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.3), 0 0 0 1px rgba(226, 232, 240, 0.9);
+  z-index: 230;
   display: none;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
 }
 
 .modal-box.open {
   display: block;
+}
+
+.pill-btn-primary {
+  background: var(--accent-blue) !important;
+  color: #FFFFFF !important;
+  border-color: #3730A3 !important;
+  box-shadow: 0 1px 4px rgba(79, 70, 229, 0.3) !important;
+}
+
+.pill-btn-primary:active {
+  background: #3730A3 !important;
+  -webkit-transform: scale(0.95);
+  transform: scale(0.95);
 }
 
 .modal-field-lbl {

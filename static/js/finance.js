@@ -318,15 +318,75 @@ function highlightTargetSection(targetEl) {
 }
 
 /* =========================================================
-   FITUR 1: PENCATATAN TRANSAKSI, SCAN STRUK, & QUICK TEMPLATE
+   FITUR 1: PENCATATAN TRANSAKSI, SCAN STRUK, & MODAL
    ========================================================= */
+function openAddTxModal() {
+  var backdrop = document.getElementById("add-tx-modal-backdrop");
+  var box = document.getElementById("add-tx-modal-box");
+
+  var typeEl = document.getElementById("tx-type");
+  var catEl = document.getElementById("tx-cat");
+  var amountEl = document.getElementById("tx-amount");
+  var noteEl = document.getElementById("tx-note");
+  var dateEl = document.getElementById("tx-date");
+  var timeEl = document.getElementById("tx-time");
+  var receiptFileEl = document.getElementById("tx-receipt-file");
+  var receiptLabelEl = document.getElementById("tx-receipt-label");
+
+  if (typeEl) typeEl.value = "OUT";
+  if (catEl) catEl.value = "Makanan";
+  if (amountEl) amountEl.value = "";
+  if (noteEl) noteEl.value = "";
+
+  var now = new Date();
+  var dateVal = now.getFullYear() + "-" + ("0" + (now.getMonth() + 1)).slice(-2) + "-" + ("0" + now.getDate()).slice(-2);
+  var timeVal = ("0" + now.getHours()).slice(-2) + ":" + ("0" + now.getMinutes()).slice(-2);
+
+  if (dateEl) dateEl.value = dateVal;
+  if (timeEl) timeEl.value = timeVal;
+
+  receiptBase64 = "";
+  if (receiptFileEl) receiptFileEl.value = "";
+  if (receiptLabelEl) {
+    receiptLabelEl.textContent = "📷 Pindai / Lampirkan Foto Struk (Opsional)";
+    receiptLabelEl.style.color = "";
+  }
+
+  updateAccountSelectOptions();
+  onTxTypeChange("OUT");
+
+  if (backdrop) backdrop.className = "modal-backdrop open";
+  if (box) box.className = "modal-box open";
+
+  if (amountEl) {
+    setTimeout(function() {
+      try { amountEl.focus(); } catch (e) {}
+    }, 150);
+  }
+}
+
+function closeAddTxModal() {
+  var backdrop = document.getElementById("add-tx-modal-backdrop");
+  var box = document.getElementById("add-tx-modal-box");
+  if (backdrop) backdrop.className = "modal-backdrop";
+  if (box) box.className = "modal-box";
+}
+
 function fillQuickTx(type, cat, amt, note) {
+  var backdrop = document.getElementById("add-tx-modal-backdrop");
+  if (!backdrop || backdrop.className.indexOf("open") === -1) {
+    openAddTxModal();
+  }
+
   var typeEl = document.getElementById("tx-type");
   var catEl = document.getElementById("tx-cat");
   var amtEl = document.getElementById("tx-amount");
   var noteEl = document.getElementById("tx-note");
 
-  if (typeEl) typeEl.value = type;
+  if (typeEl) {
+    typeEl.value = type;
+    onTxTypeChange(type);
+  }
   if (catEl) catEl.value = cat;
   if (amtEl) amtEl.value = formatIdrCurrency(amt);
   if (noteEl) noteEl.value = note;
@@ -396,15 +456,18 @@ function handleReceiptScan(inputEl) {
 
 function onTxTypeChange(val) {
   var targetBox = document.getElementById("tx-target-account-box");
+  var catCell = document.getElementById("tx-cat-cell");
   var catSelect = document.getElementById("tx-cat");
   var accLbl = document.getElementById("tx-account-lbl");
 
   if (val === "TRF") {
     if (targetBox) targetBox.style.display = "block";
+    if (catCell) catCell.style.display = "none";
     if (catSelect) catSelect.disabled = true;
     if (accLbl) accLbl.textContent = "Dari Rekening Asal";
   } else {
     if (targetBox) targetBox.style.display = "none";
+    if (catCell) catCell.style.display = "block";
     if (catSelect) catSelect.disabled = false;
     if (accLbl) accLbl.textContent = "Sumber Rekening";
   }
@@ -417,6 +480,8 @@ function addTransaction() {
   var targetAccEl = document.getElementById("tx-target-account");
   var amountEl = document.getElementById("tx-amount");
   var noteEl = document.getElementById("tx-note");
+  var dateEl = document.getElementById("tx-date");
+  var timeEl = document.getElementById("tx-time");
   var receiptFileEl = document.getElementById("tx-receipt-file");
   var receiptLabelEl = document.getElementById("tx-receipt-label");
 
@@ -440,6 +505,32 @@ function addTransaction() {
     return;
   }
 
+  var rawDate = dateEl ? dateEl.value : "";
+  var rawTime = (timeEl && timeEl.value) ? timeEl.value : "12:00";
+  var formattedDate = "";
+  var calculatedTs = 0;
+
+  if (rawDate && rawDate.indexOf("-") !== -1) {
+    var parts = rawDate.split("-");
+    if (parts.length === 3) {
+      formattedDate = parts[2] + "/" + parts[1] + "/" + parts[0] + " " + rawTime;
+      var y = parseInt(parts[0], 10);
+      var m = parseInt(parts[1], 10) - 1;
+      var d = parseInt(parts[2], 10);
+      var tParts = rawTime.split(":");
+      var hh = tParts.length > 0 ? parseInt(tParts[0], 10) : 12;
+      var mm = tParts.length > 1 ? parseInt(tParts[1], 10) : 0;
+      var dt = new Date(y, m, d, hh, mm, 0);
+      calculatedTs = dt.getTime();
+    }
+  }
+
+  if (!formattedDate) {
+    var nowD = new Date();
+    formattedDate = ("0" + nowD.getDate()).slice(-2) + "/" + ("0" + (nowD.getMonth() + 1)).slice(-2) + "/" + nowD.getFullYear() + " " + ("0" + nowD.getHours()).slice(-2) + ":" + ("0" + nowD.getMinutes()).slice(-2);
+    calculatedTs = nowD.getTime();
+  }
+
   var payload = {
     type: type,
     category: category,
@@ -447,7 +538,9 @@ function addTransaction() {
     target_account: targetAccount,
     amount: amountVal,
     note: note,
-    receipt_image: receiptBase64 || ""
+    receipt_image: receiptBase64 || "",
+    date: formattedDate,
+    timestamp: calculatedTs
   };
 
   var xhr = new XMLHttpRequest();
@@ -460,9 +553,10 @@ function addTransaction() {
       receiptBase64 = "";
       if (receiptFileEl) receiptFileEl.value = "";
       if (receiptLabelEl) {
-        receiptLabelEl.textContent = "📷 Pindai / Lampirkan Foto Struk Belanja (Opsional)";
+        receiptLabelEl.textContent = "📷 Pindai / Lampirkan Foto Struk (Opsional)";
         receiptLabelEl.style.color = "";
       }
+      closeAddTxModal();
       loadAllFinanceData();
     } else {
       alert("Gagal menyimpan transaksi ke database.");

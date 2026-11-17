@@ -35,7 +35,7 @@
 
   <!-- TOMBOL AKSI CEPAT (QUICK PILLS) -->
   <div class="wallet-quick-actions">
-    <a href="#section-input-tx" class="wq-btn" onclick="scrollToFinanceSection(event, 'section-input-tx')">＋ Catat</a>
+    <button type="button" class="wq-btn" onclick="openAddTxModal()">＋ Catat</button>
     <a href="#section-accounts" class="wq-btn" onclick="scrollToFinanceSection(event, 'section-accounts')">💳 Rekening</a>
     <a href="#section-budget" class="wq-btn" onclick="scrollToFinanceSection(event, 'section-budget')">🎯 Budget</a>
     <a href="#section-bills" class="wq-btn" onclick="scrollToFinanceSection(event, 'section-bills')">🔔 Tagihan</a>
@@ -194,88 +194,6 @@
   <div id="bills-list"></div>
 </div>
 
-<!-- FITUR 1: PENCATATAN TRANSAKSI (MANUAL, TEMPLATE OTOMATIS & SCAN STRUK) -->
-<div class="clean-card card-input-tx" id="section-input-tx">
-  <div class="card-title-row">
-    <div class="ct-left">
-      <span class="card-badge-icon badge-indigo">📝</span>
-      <span class="card-title-text">Catat Transaksi Baru</span>
-    </div>
-    <div class="ct-right">
-      <span style="font-size:10px; font-weight:700; color:var(--text-muted);">Manual / Struk / Transfer</span>
-    </div>
-  </div>
-
-  <!-- TEMPLATE OTOMATIS 1-KLIK -->
-  <div class="quick-chips-row">
-    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Minuman','15000','Minuman')">🥤 Minuman 15rb</button>
-    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Makanan','35000','Makan Siang')">🍔 Makan 35rb</button>
-    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Makanan & Minuman','50000','Makan & Minum')">🍽️ Makan &amp; Minum</button>
-    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Game','50000','Voucher Game')">🎮 Game 50rb</button>
-    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Olahraga','30000','Olahraga / Gym')">⚽ Olahraga</button>
-    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Tagihan & Cicilan','150000','Langganan')">⚡ Tagihan</button>
-    <button type="button" class="chip-btn" onclick="fillQuickTx('IN','Gaji/Proyek','5000000','Pemasukan Gaji')">💰 Gaji</button>
-    <button type="button" class="chip-btn" onclick="fillQuickTx('TRF','Transfer Antar Rekening','100000','Pindah Dana')">⇄ Transfer</button>
-  </div>
-
-  <div class="split-2-table">
-    <div class="split-cell">
-      <div class="modal-field-lbl" style="margin-top:0;">Tipe Transaksi</div>
-      <select id="tx-type" class="input-field" onchange="onTxTypeChange(this.value)">
-        <option value="OUT">Pengeluaran (-)</option>
-        <option value="IN">Pemasukan (+)</option>
-        <option value="TRF">Transfer Antar Rekening (⇄)</option>
-      </select>
-    </div>
-    <div class="stat-spacer"></div>
-    <div class="split-cell">
-      <div class="modal-field-lbl" style="margin-top:0;">Kategori</div>
-      <select id="tx-cat" class="input-field">
-        <option value="Makanan">Makanan</option>
-        <option value="Minuman">Minuman</option>
-        <option value="Makanan & Minuman">Makanan &amp; Minuman</option>
-        <option value="Olahraga">Olahraga</option>
-        <option value="Game">Game</option>
-        <option value="Kebutuhan">Kebutuhan</option>
-        <option value="Tagihan & Cicilan">Tagihan &amp; Cicilan</option>
-        <option value="Hardware/IT">Hardware/IT</option>
-        <option value="Investasi">Investasi</option>
-        <option value="Gaji/Proyek">Gaji/Proyek</option>
-        <option value="Lainnya">Lainnya</option>
-      </select>
-    </div>
-  </div>
-
-  <div class="modal-field-lbl" id="tx-account-lbl" style="margin-top:0;">Sumber Rekening</div>
-  <select id="tx-account" class="input-field"></select>
-
-  <!-- REKENING TUJUAN UNTUK TRANSFER -->
-  <div id="tx-target-account-box" style="display:none; margin-bottom:10px;">
-    <div class="modal-field-lbl" style="margin-top:0;">Rekening Tujuan (Penerima Transfer)</div>
-    <select id="tx-target-account" class="input-field"></select>
-  </div>
-
-  <input
-    type="text"
-    inputmode="decimal"
-    id="tx-amount"
-    class="input-field"
-    style="font-weight:800; letter-spacing:0.3px;"
-    placeholder="IDR 0 (Contoh: IDR 25.000,00)"
-    oninput="formatIdrLiveInput(this)"
-  >
-
-  <input type="text" id="tx-note" class="input-field" placeholder="Catatan transaksi...">
-
-  <!-- PEMINDAIAN / LAMPIRAN FOTO STRUK -->
-  <label class="file-drop-label" for="tx-receipt-file" id="tx-receipt-label" style="padding:8px 10px; margin-bottom:10px;">
-    📷 Pindai / Lampirkan Foto Struk Belanja (Opsional)
-  </label>
-  <input type="file" id="tx-receipt-file" accept="image/*" style="display:none;" onchange="handleReceiptScan(this)">
-
-  <button type="button" class="btn-full-dark" onclick="addTransaction()">+ Simpan Transaksi</button>
-</div>
-
 <!-- RIWAYAT TRANSAKSI TERBARU -->
 <div class="clean-card card-history" id="section-tx-history">
   <div class="card-title-row">
@@ -284,7 +202,8 @@
       <span class="card-title-text">Riwayat Transaksi</span>
     </div>
     <div class="ct-right">
-      <button type="button" class="pill-mini-btn" onclick="exportTransactionsCsv()" style="font-weight:700;">📥 Unduh CSV</button>
+      <button type="button" class="pill-mini-btn pill-btn-primary" onclick="openAddTxModal()" style="font-weight:700; margin-right:4px;">＋ Catat</button>
+      <button type="button" class="pill-mini-btn" onclick="exportTransactionsCsv()" style="font-weight:700;">📥 CSV</button>
     </div>
   </div>
 
@@ -467,6 +386,108 @@
   <button type="button" class="btn-full-dark" onclick="saveEditedAccount()">Simpan Perubahan Rekening</button>
 </div>
 
+<!-- MODAL 1: CATAT TRANSAKSI BARU (MODAL PROFESIONAL) -->
+<div class="modal-backdrop" id="add-tx-modal-backdrop" onclick="closeAddTxModal()"></div>
+<div class="modal-box" id="add-tx-modal-box" style="top:50%; left:50%; -webkit-transform:translate(-50%, -50%); transform:translate(-50%, -50%); margin:0; max-height:88vh; overflow-y:auto;">
+  <div class="card-title-row" style="margin-bottom:8px; padding-bottom:8px;">
+    <div class="ct-left">
+      <span class="card-badge-icon badge-indigo">📝</span>
+      <span class="card-title-text">Catat Transaksi Baru</span>
+    </div>
+    <div class="ct-right">
+      <button type="button" class="pill-mini-btn" onclick="closeAddTxModal()">&#10005;</button>
+    </div>
+  </div>
+
+  <!-- TEMPLATE OTOMATIS 1-KLIK -->
+  <div class="quick-chips-row" style="margin-bottom:10px;">
+    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Minuman','15000','Minuman')">🥤 Minuman 15rb</button>
+    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Makanan','35000','Makan Siang')">🍔 Makan 35rb</button>
+    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Makanan & Minuman','50000','Makan & Minum')">🍽️ Makan &amp; Minum</button>
+    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Game','50000','Voucher Game')">🎮 Game 50rb</button>
+    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Olahraga','30000','Olahraga / Gym')">⚽ Olahraga</button>
+    <button type="button" class="chip-btn" onclick="fillQuickTx('OUT','Tagihan & Cicilan','150000','Langganan')">⚡ Tagihan</button>
+    <button type="button" class="chip-btn" onclick="fillQuickTx('IN','Gaji/Proyek','5000000','Pemasukan Gaji')">💰 Gaji</button>
+    <button type="button" class="chip-btn" onclick="fillQuickTx('TRF','Transfer Antar Rekening','100000','Pindah Dana')">⇄ Transfer</button>
+  </div>
+
+  <!-- TIPE TRANSAKSI & KATEGORI -->
+  <div class="split-2-table" style="margin-bottom:8px;">
+    <div class="split-cell">
+      <div class="modal-field-lbl" style="margin-top:0;">Tipe Transaksi</div>
+      <select id="tx-type" class="input-field" onchange="onTxTypeChange(this.value)">
+        <option value="OUT">🔴 Pengeluaran (-)</option>
+        <option value="IN">🟢 Pemasukan (+)</option>
+        <option value="TRF">⇄ Transfer Antar Rekening</option>
+      </select>
+    </div>
+    <div class="stat-spacer"></div>
+    <div class="split-cell" id="tx-cat-cell">
+      <div class="modal-field-lbl" style="margin-top:0;">Kategori</div>
+      <select id="tx-cat" class="input-field">
+        <option value="Makanan">Makanan</option>
+        <option value="Minuman">Minuman</option>
+        <option value="Makanan & Minuman">Makanan &amp; Minuman</option>
+        <option value="Olahraga">Olahraga</option>
+        <option value="Game">Game</option>
+        <option value="Kebutuhan">Kebutuhan</option>
+        <option value="Tagihan & Cicilan">Tagihan &amp; Cicilan</option>
+        <option value="Hardware/IT">Hardware/IT</option>
+        <option value="Investasi">Investasi</option>
+        <option value="Gaji/Proyek">Gaji/Proyek</option>
+        <option value="Lainnya">Lainnya</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- TANGGAL & JAM TERJADINYA TRANSAKSI -->
+  <div class="split-2-table" style="margin-bottom:8px;">
+    <div class="split-cell" style="width:58%;">
+      <div class="modal-field-lbl" style="margin-top:0;">Tanggal Terjadinya</div>
+      <input type="date" id="tx-date" class="input-field" style="margin-bottom:0; font-weight:700; font-size:11.5px;">
+    </div>
+    <div class="stat-spacer"></div>
+    <div class="split-cell" style="width:38%;">
+      <div class="modal-field-lbl" style="margin-top:0;">Jam</div>
+      <input type="time" id="tx-time" class="input-field" style="margin-bottom:0; font-weight:700; font-size:11.5px;">
+    </div>
+  </div>
+
+  <!-- SUMBER REKENING -->
+  <div class="modal-field-lbl" id="tx-account-lbl" style="margin-top:0;">Sumber Rekening</div>
+  <select id="tx-account" class="input-field"></select>
+
+  <!-- REKENING TUJUAN UNTUK TRANSFER -->
+  <div id="tx-target-account-box" style="display:none; margin-bottom:8px;">
+    <div class="modal-field-lbl" style="margin-top:0;">Rekening Tujuan (Penerima Transfer)</div>
+    <select id="tx-target-account" class="input-field"></select>
+  </div>
+
+  <!-- NOMINAL TRANSAKSI -->
+  <div class="modal-field-lbl" style="margin-top:0;">Nominal Transaksi (IDR)</div>
+  <input
+    type="text"
+    inputmode="decimal"
+    id="tx-amount"
+    class="input-field"
+    style="font-weight:800; font-size:14px; letter-spacing:0.3px;"
+    placeholder="IDR 0 (Contoh: IDR 25.000,00)"
+    oninput="formatIdrLiveInput(this)"
+  >
+
+  <!-- CATATAN TRANSAKSI -->
+  <div class="modal-field-lbl" style="margin-top:0;">Catatan / Keterangan</div>
+  <input type="text" id="tx-note" class="input-field" placeholder="Catatan transaksi...">
+
+  <!-- PEMINDAIAN / LAMPIRAN FOTO STRUK -->
+  <label class="file-drop-label" for="tx-receipt-file" id="tx-receipt-label" style="padding:7px 10px; margin-bottom:10px; font-size:11px;">
+    📷 Pindai / Lampirkan Foto Struk (Opsional)
+  </label>
+  <input type="file" id="tx-receipt-file" accept="image/*" style="display:none;" onchange="handleReceiptScan(this)">
+
+  <button type="button" class="btn-full-dark" onclick="addTransaction()" style="font-weight:800; font-size:13px; padding:10px;">+ Simpan Transaksi</button>
+</div>
+
 <!-- MODAL 3: EDIT CATATAN TRANSAKSI -->
 <div class="modal-backdrop" id="edit-tx-modal-backdrop" onclick="closeEditTxModal()"></div>
 <div class="modal-box" id="edit-tx-modal-box" style="top:50%; left:50%; -webkit-transform:translate(-50%, -50%); transform:translate(-50%, -50%); margin:0; max-height:85vh; overflow-y:auto;">
@@ -557,5 +578,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/finance.js') }}?v=28"></script>
+<script src="{{ url_for('static', filename='js/finance.js') }}?v=29"></script>
 {% endblock %}
